@@ -1,0 +1,11 @@
+# Robots.txt for Welo Group
+
+User-agent: *
+Allow: /
+
+# Disallow admin or private areas (if any in the future)
+# Disallow: /admin/
+# Disallow: /api/
+
+# Sitemap location (update when sitemap is generated)
+Sitemap: https://welogroup.com/sitemap.xml
