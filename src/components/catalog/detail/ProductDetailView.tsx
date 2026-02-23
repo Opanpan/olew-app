@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { motion } from 'framer-motion';
-import { Box, Package, Ruler, Weight, Award, Sparkles, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Box, Package, Ruler, Weight, Award, Sparkles, ArrowLeft, ChevronLeft, ChevronRight, Plus, Minus, Hash, Tag, FileText } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -34,6 +34,50 @@ const Product3DViewer = dynamic(() => import('./Product3DViewer'), {
   loading: () => <Viewer3DLoading />,
 });
 
+// Accordion section component for collapsible product info panels
+interface AccordionSectionProps {
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  isFirst?: boolean;
+}
+
+function AccordionSection({ title, isOpen, onToggle, children, isFirst = false }: AccordionSectionProps) {
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className={cn(
+          'w-full flex items-center justify-between px-4 py-4 cursor-pointer transition-colors text-left',
+          'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800',
+          !isFirst && 'border-t border-gray-200 dark:border-gray-700'
+        )}
+      >
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">{title}</span>
+        {isOpen ? (
+          <Minus className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+        ) : (
+          <Plus className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+        )}
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 interface ProductDetailViewProps {
   product: Product;
   allProducts: Product[];
@@ -46,6 +90,16 @@ export default function ProductDetailView({
   images = [],
 }: ProductDetailViewProps) {
   const { lang, dict } = useLang();
+
+  const [openSections, setOpenSections] = useState({
+    specifications: true,
+    colors: false,
+    services: false,
+  });
+
+  const toggleSection = (key: keyof typeof openSections) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Get available caps from allProducts (filter caps only)
   const availableCaps = allProducts.filter(p => p.category === 'cap');
@@ -379,54 +433,93 @@ export default function ProductDetailView({
               </p>
             </div>
 
-            {/* Specifications */}
-            <div className="p-3 md:p-6 rounded-xl md:rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-              <h2 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-white mb-3 md:mb-6">
-                {dict.catalog.product_detail.specifications}
-              </h2>
-              <div className="grid grid-cols-2 gap-3 md:gap-6">
-                <div className="flex items-start gap-2 md:gap-3">
-                  <Weight className="w-4 h-4 md:w-5 md:h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{dict.catalog.product_detail.weight}</p>
-                    <p className="text-xs md:text-base font-semibold text-gray-900 dark:text-white">
-                      {product.dimensions.weight}g
-                    </p>
-                  </div>
-                </div>
+            {/* Accordion: Specifications, Colors, Additional Services */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900">
+              {/* Specifications */}
+              <AccordionSection
+                title={dict.catalog.product_detail.specifications}
+                isOpen={openSections.specifications}
+                onToggle={() => toggleSection('specifications')}
+                isFirst
+              >
+                {(() => {
+                  const specRows = [
+                    { icon: <Hash className="w-4 h-4" />, label: dict.catalog.product_detail.product_id, value: product.id },
+                    { icon: <Weight className="w-4 h-4" />, label: dict.catalog.product_detail.weight, value: `${product.dimensions.weight}g` },
+                    { icon: <Ruler className="w-4 h-4" />, label: dict.catalog.product_detail.dimensions, value: `${product.dimensions.width}×${product.dimensions.height}mm` },
+                    ...(product.dimensions.capacity ? [{ icon: <Package className="w-4 h-4" />, label: dict.catalog.product_detail.capacity, value: `${product.dimensions.capacity}ml` }] : []),
+                    { icon: <Tag className="w-4 h-4" />, label: dict.catalog.product_detail.type, value: product.type },
+                  ];
+                  return (
+                    <div>
+                      {specRows.map((row, i) => (
+                        <div
+                          key={row.label}
+                          className={cn(
+                            'flex items-center gap-3 px-4 py-3',
+                            i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-900'
+                          )}
+                        >
+                          <div className="w-4 text-primary-600 dark:text-primary-400 flex-shrink-0">{row.icon}</div>
+                          <span className="font-semibold w-36 text-sm text-gray-900 dark:text-white flex-shrink-0">{row.label}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </AccordionSection>
 
-                <div className="flex items-start gap-2 md:gap-3">
-                  <Ruler className="w-4 h-4 md:w-5 md:h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{dict.catalog.product_detail.dimensions}</p>
-                    <p className="text-xs md:text-base font-semibold text-gray-900 dark:text-white">
-                      {product.dimensions.width}×{product.dimensions.height}mm
-                    </p>
-                  </div>
+              {/* Available Colors */}
+              <AccordionSection
+                title={dict.catalog.product_detail.colors}
+                isOpen={openSections.colors}
+                onToggle={() => toggleSection('colors')}
+              >
+                <div className="px-4 py-4 flex flex-wrap gap-3 bg-white dark:bg-gray-900">
+                  {product.colors.map(color => (
+                    <div key={color} className="flex items-center gap-2">
+                      <div
+                        className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                        style={{ backgroundColor: colorToHex[color] || color }}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">{color}</span>
+                    </div>
+                  ))}
                 </div>
+              </AccordionSection>
 
-                {product.dimensions.capacity && (
-                  <div className="flex items-start gap-2 md:gap-3">
-                    <Package className="w-4 h-4 md:w-5 md:h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{dict.catalog.product_detail.capacity}</p>
-                      <p className="text-xs md:text-base font-semibold text-gray-900 dark:text-white">
-                        {product.dimensions.capacity}ml
+              {/* Additional Services */}
+              <AccordionSection
+                title={dict.catalog.product_detail.additional_services}
+                isOpen={openSections.services}
+                onToggle={() => toggleSection('services')}
+              >
+                <div className="px-4 py-4 space-y-3 bg-white dark:bg-gray-900">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">
+                        {dict.catalog.product_detail.bulk_discount_title}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {dict.catalog.product_detail.bulk_discount_desc}
                       </p>
                     </div>
                   </div>
-                )}
-
-                <div className="flex items-start gap-2 md:gap-3">
-                  <Package className="w-4 h-4 md:w-5 md:h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{dict.catalog.product_detail.type}</p>
-                    <p className="text-xs md:text-base font-semibold text-gray-900 dark:text-white">
-                      {product.type}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">
+                        {dict.catalog.product_detail.custom_printing_title}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {dict.catalog.product_detail.custom_printing_desc}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </AccordionSection>
             </div>
 
             {/* Color Picker */}
@@ -444,11 +537,7 @@ export default function ProductDetailView({
             </div>
 
             {/* Order Form */}
-            <OrderForm
-              productName={product.name}
-              productId={product.id}
-              selectedColor={selectedColor}
-            />
+            <OrderForm />
           </div>
         </div>
       </section>

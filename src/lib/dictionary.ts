@@ -149,6 +149,8 @@ export const dictionaries = {
         bulk_discount_desc: 'Contact us for special pricing on orders over 10,000 pieces',
         custom_printing_title: 'Custom Printing Available',
         custom_printing_desc: 'Add your logo or design with our custom printing service',
+        colors: 'Available Colors',
+        additional_services: 'Additional Services',
       },
     },
     certificates: {
@@ -375,6 +377,8 @@ export const dictionaries = {
         bulk_discount_desc: 'Hubungi kami untuk harga spesial pesanan lebih dari 10.000 buah',
         custom_printing_title: 'Cetak Kustom Tersedia',
         custom_printing_desc: 'Tambahkan logo atau desain Anda dengan layanan cetak kustom kami',
+        colors: 'Warna Tersedia',
+        additional_services: 'Layanan Tambahan',
       },
     },
     certificates: {
