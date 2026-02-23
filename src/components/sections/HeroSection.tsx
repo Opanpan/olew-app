@@ -10,7 +10,7 @@ import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
 
 const slides = [
-  { id: 1, titleKey: 'slide1_title', descKey: 'slide1_desc', gradient: 'from-emerald-600 via-teal-500 to-cyan-500' },
+  { id: 1, titleKey: 'slide1_title', descKey: 'slide1_desc', gradient: 'from-blue-600 via-sky-500 to-cyan-500' },
   { id: 2, titleKey: 'slide2_title', descKey: 'slide2_desc', gradient: 'from-amber-500 via-orange-500 to-rose-500' },
   { id: 3, titleKey: 'slide3_title', descKey: 'slide3_desc', gradient: 'from-violet-600 via-purple-500 to-fuchsia-500' },
 ];
@@ -141,7 +141,7 @@ export default function HeroSection() {
                             <path d="M50 45 L50 75 Q38 85 38 100 L38 285 Q38 305 58 305 L82 305 Q102 305 102 285 L102 100 Q102 85 90 75 L90 45" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
                             <path d="M40 140 L40 280 Q40 298 58 298 L82 298 Q100 298 100 280 L100 140 Q70 160 40 140" fill="rgba(255,255,255,0.2)" />
                             <rect x="48" y="170" width="44" height="70" rx="3" fill="rgba(255,255,255,0.35)" />
-                            <text x="70" y="210" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">WELO</text>
+                            <text x="70" y="210" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">OLEW</text>
                           </svg>
                         </div>
 

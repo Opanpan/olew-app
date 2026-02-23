@@ -5,8 +5,8 @@ export async function generateMetadata({ params }: { params: { lang: string } })
 
   return {
     title: isIndonesian
-      ? 'Tentang PT Olew Group - Memimpin Inovasi Kemasan | Welo Group'
-      : 'About PT Olew Group - Leading Packaging Innovation | Welo Group',
+      ? 'Tentang PT Olew Group - Memimpin Inovasi Kemasan | Olew Group'
+      : 'About PT Olew Group - Leading Packaging Innovation | Olew Group',
     description: isIndonesian
       ? 'Didirikan pada tahun 2018, PT Olew Group telah berkembang menjadi perusahaan kosmetik terkemuka di Asia dengan fasilitas produksi canggih, bersertifikat CPKB dan SJH.'
       : 'Founded in 2018, PT Olew Group has grown into a leading cosmetics company in Asia with state-of-the-art production facilities, CPKB and SJH certified.',
@@ -14,17 +14,17 @@ export async function generateMetadata({ params }: { params: { lang: string } })
       ? 'PT Olew Group, tentang kami, perusahaan kosmetik, kemasan premium, CPKB, SJH, halal, manufaktur kosmetik, solusi kemasan'
       : 'PT Olew Group, about us, cosmetics company, premium packaging, CPKB, SJH, halal, cosmetics manufacturing, packaging solutions',
     openGraph: {
-      title: isIndonesian ? 'Tentang PT Olew Group | Welo Group' : 'About PT Olew Group | Welo Group',
+      title: isIndonesian ? 'Tentang PT Olew Group | Olew Group' : 'About PT Olew Group | Olew Group',
       description: isIndonesian
         ? 'Perusahaan kosmetik terkemuka di Asia dengan teknologi canggih dan sertifikasi internasional'
         : 'Leading cosmetics company in Asia with advanced technology and international certifications',
       type: 'website',
       locale: isIndonesian ? 'id_ID' : 'en_US',
-      siteName: 'Welo Group',
+      siteName: 'Olew Group',
     },
     twitter: {
       card: 'summary_large_image',
-      title: isIndonesian ? 'Tentang PT Olew Group | Welo Group' : 'About PT Olew Group | Welo Group',
+      title: isIndonesian ? 'Tentang PT Olew Group | Olew Group' : 'About PT Olew Group | Olew Group',
       description: isIndonesian
         ? 'Memimpin inovasi dalam solusi kemasan'
         : 'Leading innovation in packaging solutions',

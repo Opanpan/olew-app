@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 
 const certIcons = [BadgeCheck, Shield, CheckCircle2];
-const certGradients = ['from-emerald-500 to-green-600', 'from-blue-500 to-indigo-600', 'from-amber-500 to-orange-600'];
+const certGradients = ['from-blue-500 to-indigo-600', 'from-blue-500 to-indigo-600', 'from-amber-500 to-orange-600'];
 
 export default function CertificatesSection() {
   const { dict } = useLang();
@@ -88,7 +88,7 @@ export default function CertificatesSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 p-8 md:p-12">
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-500 via-indigo-500 to-sky-600 p-8 md:p-12">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-10 right-10 w-40 h-40 border-2 border-white rounded-full" />
               <div className="absolute bottom-10 left-10 w-32 h-32 border-2 border-white rounded-full" />

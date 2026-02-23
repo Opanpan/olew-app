@@ -69,7 +69,7 @@ export default function AboutUs() {
       icon: TrendingUp,
       label: dict.about.stats.clients,
       value: dict.about.stats.clients_value,
-      color: 'from-green-500 to-emerald-500',
+      color: 'from-blue-500 to-sky-500',
     },
   ];
 

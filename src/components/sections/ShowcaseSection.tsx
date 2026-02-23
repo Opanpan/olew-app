@@ -12,7 +12,7 @@ const gradients = [
   'from-rose-500 via-pink-500 to-fuchsia-600',
   'from-cyan-500 via-blue-500 to-indigo-600',
   'from-amber-400 via-orange-500 to-red-500',
-  'from-emerald-400 via-green-500 to-teal-600',
+  'from-sky-400 via-blue-500 to-indigo-600',
 ];
 
 const icons = ['✨', '🆕', '👑', '🌿'];
@@ -85,7 +85,7 @@ export default function ShowcaseSection() {
                           <rect x="40" y="8" width="40" height="22" rx="3" fill="rgba(255,255,255,0.95)" />
                           <path d="M40 30 L40 55 Q30 63 30 78 L30 245 Q30 262 48 262 L72 262 Q90 262 90 245 L90 78 Q90 63 80 55 L80 30" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
                           <rect x="38" y="130" width="44" height="60" rx="3" fill="rgba(255,255,255,0.35)" />
-                          <text x="60" y="165" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">WELO</text>
+                          <text x="60" y="165" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">OLEW</text>
                         </svg>
                         <svg viewBox="0 0 100 240" className="w-12 md:w-20 h-auto drop-shadow-2xl rotate-6" fill="none">
                           <ellipse cx="50" cy="12" rx="16" ry="8" fill="rgba(255,255,255,0.9)" />

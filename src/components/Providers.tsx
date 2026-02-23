@@ -9,7 +9,7 @@ export function Providers({ children }: { children: ReactNode }) {
       attribute="class"
       defaultTheme="light"
       enableSystem={false}
-      storageKey="welo-theme"
+      storageKey="olew-theme"
       disableTransitionOnChange
     >
       {children}

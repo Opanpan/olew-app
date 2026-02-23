@@ -15,9 +15,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'Welo Group - Premium Custom Bottle Packaging Solutions',
+  title: 'Olew Group - Premium Custom Bottle Packaging Solutions',
   description: 'Leading manufacturer of customizable bottles with premium caps for Body Care, Skincare, Pharmacy, Pump Lotion, and Perfume. Halal certified packaging solutions.',
-  keywords: ['custom bottles', 'packaging solutions', 'cosmetic bottles', 'halal certified', 'welo group'],
+  keywords: ['custom bottles', 'packaging solutions', 'cosmetic bottles', 'halal certified', 'olew group'],
 };
 
 export default function RootLayout({
@@ -33,7 +33,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('welo-theme');
+                const theme = localStorage.getItem('olew-theme');
                 if (theme === 'dark') {
                   document.documentElement.classList.add('dark');
                 } else {

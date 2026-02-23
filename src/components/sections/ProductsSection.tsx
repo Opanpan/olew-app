@@ -11,14 +11,14 @@ const productGradients = [
   'from-violet-500 to-purple-600',
   'from-cyan-500 to-blue-600',
   'from-amber-500 to-orange-600',
-  'from-emerald-500 to-teal-600',
+  'from-blue-500 to-sky-600',
 ];
 const productBgGradients = [
   'from-rose-500/10 to-pink-600/10 dark:from-rose-500/20 dark:to-pink-600/20',
   'from-violet-500/10 to-purple-600/10 dark:from-violet-500/20 dark:to-purple-600/20',
   'from-cyan-500/10 to-blue-600/10 dark:from-cyan-500/20 dark:to-blue-600/20',
   'from-amber-500/10 to-orange-600/10 dark:from-amber-500/20 dark:to-orange-600/20',
-  'from-emerald-500/10 to-teal-600/10 dark:from-emerald-500/20 dark:to-teal-600/20',
+  'from-blue-500/10 to-sky-600/10 dark:from-blue-500/20 dark:to-sky-600/20',
 ];
 
 export default function ProductsSection() {

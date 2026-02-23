@@ -40,7 +40,7 @@ export default function BottlesPage() {
     '@type': 'CollectionPage',
     name: dict.catalog.bottles.title,
     description: dict.catalog.bottles.subtitle,
-    url: `https://welogroup.com/${lang}/bottles`,
+    url: `https://olewgroup.com/${lang}/bottles`,
     breadcrumb: {
       '@type': 'BreadcrumbList',
       itemListElement: [
@@ -48,7 +48,7 @@ export default function BottlesPage() {
           '@type': 'ListItem',
           position: 1,
           name: dict.nav.home,
-          item: `https://welogroup.com/${lang}`,
+          item: `https://olewgroup.com/${lang}`,
         },
         {
           '@type': 'ListItem',

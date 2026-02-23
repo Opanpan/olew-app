@@ -1,6 +1,6 @@
-# Welo Group - Premium Custom Bottle Packaging
+# Olew Group - Premium Custom Bottle Packaging
 
-A modern, responsive landing page for Welo Group.
+A modern, responsive landing page for Olew Group.
 
 ## Getting Started
 
@@ -31,10 +31,10 @@ npm start
 
 ```bash
 # Development
-docker-compose up welo-dev
+docker-compose up olew-dev
 
 # Production
-docker-compose up welo-prod
+docker-compose up olew-prod
 ```
 
 ## Tech Stack

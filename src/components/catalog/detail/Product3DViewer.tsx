@@ -124,7 +124,7 @@ export default function Product3DViewer({
   };
 
   return (
-    <div className="relative w-full aspect-square rounded-2xl md:rounded-3xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+    <div className="relative w-full aspect-square rounded-2xl md:rounded-3xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900" style={{ touchAction: 'none' }}>
       {/* Reset Camera Button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
@@ -183,12 +183,17 @@ export default function Product3DViewer({
 
           {/* Camera controls */}
           <OrbitControls
+            makeDefault
             enablePan={false}
             enableZoom={true}
+            enableRotate={true}
             minDistance={2}
             maxDistance={6}
             minPolarAngle={Math.PI / 6}
             maxPolarAngle={Math.PI / 2}
+            enableDamping={true}
+            dampingFactor={0.05}
+            rotateSpeed={1}
             target={[0, 0.5, 0]}
           />
         </Suspense>

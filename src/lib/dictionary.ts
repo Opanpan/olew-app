@@ -172,7 +172,7 @@ export const dictionaries = {
     clients: {
       badge: 'Trusted Partners',
       title: 'Brands That Trust Us',
-      subtitle: 'Join hundreds of leading brands who have chosen Welo Group.',
+      subtitle: 'Join hundreds of leading brands who have chosen Olew Group.',
     },
     cta: {
       title: 'Ready to Elevate Your Brand?',
@@ -229,8 +229,8 @@ export const dictionaries = {
       follow_us: 'Follow Us',
       address: 'Jakarta, Indonesia',
       phone: '+62 21 1234 5678',
-      email: 'info@welogroup.com',
-      copyright: '© 2024 Welo Group. All rights reserved.',
+      email: 'info@olewgroup.com',
+      copyright: '© 2024 Olew Group. All rights reserved.',
     },
   },
   id: {
@@ -406,7 +406,7 @@ export const dictionaries = {
     clients: {
       badge: 'Partner Terpercaya',
       title: 'Brand yang Mempercayai Kami',
-      subtitle: 'Bergabunglah dengan ratusan brand terkemuka yang memilih Welo Group.',
+      subtitle: 'Bergabunglah dengan ratusan brand terkemuka yang memilih Olew Group.',
     },
     cta: {
       title: 'Siap Meningkatkan Brand Anda?',
@@ -463,8 +463,8 @@ export const dictionaries = {
       follow_us: 'Ikuti Kami',
       address: 'Jakarta, Indonesia',
       phone: '+62 21 1234 5678',
-      email: 'info@welogroup.com',
-      copyright: '© 2024 Welo Group. Semua hak dilindungi.',
+      email: 'info@olewgroup.com',
+      copyright: '© 2024 Olew Group. Semua hak dilindungi.',
     },
   },
 };

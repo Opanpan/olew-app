@@ -25,7 +25,7 @@ export default function Footer() {
                 <span className="text-white font-bold text-lg">W</span>
               </div>
               <div>
-                <h3 className="font-display text-lg font-bold">Welo Group</h3>
+                <h3 className="font-display text-lg font-bold">Olew Group</h3>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">

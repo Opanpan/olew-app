@@ -9,7 +9,7 @@ export default function CTASection() {
 
   return (
     <section id="contact" className="section-padding overflow-hidden">
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-emerald-500 mx-4 md:mx-8">
+      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-sky-500 mx-4 md:mx-8">
         {/* Background */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
@@ -49,7 +49,7 @@ export default function CTASection() {
             </motion.p>
 
             <motion.a
-              href="mailto:info@welogroup.com"
+              href="mailto:info@olewgroup.com"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -78,13 +78,13 @@ export default function CTASection() {
                 </div>
               </a>
 
-              <a href="mailto:info@welogroup.com" className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
+              <a href="mailto:info@olewgroup.com" className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
                 <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <div className="text-white/60 text-sm">Email us</div>
-                  <div className="text-white font-semibold">info@welogroup.com</div>
+                  <div className="text-white font-semibold">info@olewgroup.com</div>
                 </div>
               </a>
             </motion.div>

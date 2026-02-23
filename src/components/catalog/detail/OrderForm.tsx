@@ -50,13 +50,13 @@ export default function OrderForm({
     // In real implementation, this would open quote request form
     const subject = `Quote Request: ${productName}`;
     const body = `I would like to request a quote for:\n\nProduct: ${productName}\nProduct ID: ${productId}\nColor: ${selectedColor}\nQuantity: ${quantity}\n\nPlease provide pricing and availability.`;
-    window.location.href = `mailto:info@welogroup.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = `mailto:info@olewgroup.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
     <div className="space-y-3 md:space-y-6">
       {/* Price Display */}
-      <div className="p-3 md:p-6 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary-50 to-emerald-50 dark:from-primary-950/30 dark:to-emerald-950/30 border border-primary-100 dark:border-primary-900">
+      <div className="p-3 md:p-6 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary-50 to-sky-50 dark:from-primary-950/30 dark:to-sky-950/30 border border-primary-100 dark:border-primary-900">
         <div className="flex items-baseline justify-between gap-2">
           <div className="min-w-0">
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">

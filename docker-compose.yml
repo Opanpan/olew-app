@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  welo-dev:
+  olew-dev:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: welo-group-dev
+    container_name: olew-group-dev
     ports:
       - "3000:3000"
     volumes:
@@ -15,11 +15,11 @@ services:
     environment:
       - NODE_ENV=development
 
-  welo-prod:
+  olew-prod:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: welo-group-prod
+    container_name: olew-group-prod
     ports:
       - "3000:3000"
     environment:

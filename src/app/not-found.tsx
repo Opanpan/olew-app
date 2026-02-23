@@ -83,10 +83,10 @@ export default function GlobalNotFound() {
           <p className="text-sm md:text-base text-gray-700 dark:text-gray-300">
             Need help? Contact our team at{' '}
             <a
-              href="mailto:info@welogroup.com"
+              href="mailto:info@olewgroup.com"
               className="font-semibold text-primary-600 dark:text-primary-400 hover:underline"
             >
-              info@welogroup.com
+              info@olewgroup.com
             </a>
           </p>
         </div>

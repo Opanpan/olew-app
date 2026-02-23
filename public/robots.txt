@@ -1,4 +1,4 @@
-# Robots.txt for Welo Group
+# Robots.txt for Olew Group
 
 User-agent: *
 Allow: /
@@ -8,4 +8,4 @@ Allow: /
 # Disallow: /api/
 
 # Sitemap location (update when sitemap is generated)
-Sitemap: https://welogroup.com/sitemap.xml
+Sitemap: https://olewgroup.com/sitemap.xml

@@ -128,10 +128,10 @@ export default function NotFound() {
               ? 'Butuh bantuan? Hubungi tim kami di '
               : 'Need help? Contact our team at '}
             <a
-              href="mailto:info@welogroup.com"
+              href="mailto:info@olewgroup.com"
               className="font-semibold text-primary-600 dark:text-primary-400 hover:underline"
             >
-              info@welogroup.com
+              info@olewgroup.com
             </a>
           </p>
         </motion.div>

@@ -27,7 +27,7 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-emerald-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-sky-500 bg-clip-text text-transparent;
   }
   
   .btn-primary {

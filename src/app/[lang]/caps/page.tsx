@@ -40,7 +40,7 @@ export default function CapsPage() {
     '@type': 'CollectionPage',
     name: dict.catalog.caps.title,
     description: dict.catalog.caps.subtitle,
-    url: `https://welogroup.com/${lang}/caps`,
+    url: `https://olewgroup.com/${lang}/caps`,
     breadcrumb: {
       '@type': 'BreadcrumbList',
       itemListElement: [
@@ -48,7 +48,7 @@ export default function CapsPage() {
           '@type': 'ListItem',
           position: 1,
           name: dict.nav.home,
-          item: `https://welogroup.com/${lang}`,
+          item: `https://olewgroup.com/${lang}`,
         },
         {
           '@type': 'ListItem',

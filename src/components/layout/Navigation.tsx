@@ -62,7 +62,7 @@ export default function Navigation() {
             </div>
             <div className="hidden sm:block">
               <h1 className="font-display text-xl font-bold text-gray-900 dark:text-white">
-                Welo Group
+                Olew Group
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400 tracking-wider uppercase">
                 Premium Packaging

@@ -21,7 +21,7 @@ public/
 
 Assets in this folder are accessible from the root URL path. For example:
 
-- `public/images/logos/welo-logo.png` → `/images/logos/welo-logo.png`
+- `public/images/logos/olew-logo.png` → `/images/logos/olew-logo.png`
 - `public/icons/favicon.ico` → `/favicon.ico`
 
 ## Image Guidelines
