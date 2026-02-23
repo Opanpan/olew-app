@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: { params: { lang: string; id:
 
   const title = `${product.name} - ${product.type} | Olew Group`;
   const description = isIndonesian
-    ? `${product.name} - ${product.type}. Berat: ${product.dimensions.weight}g, Ukuran: ${product.dimensions.width}×${product.dimensions.height}mm. Harga mulai dari $${product.price.toFixed(2)}. Pesanan minimum: ${product.minOrder} pcs.`
-    : `${product.name} - ${product.type}. Weight: ${product.dimensions.weight}g, Dimensions: ${product.dimensions.width}×${product.dimensions.height}mm. Starting at $${product.price.toFixed(2)}. Minimum order: ${product.minOrder} pcs.`;
+    ? `${product.name} - ${product.type}. Berat: ${product.dimensions.weight}g, Ukuran: ${product.dimensions.width}×${product.dimensions.height}mm.`
+    : `${product.name} - ${product.type}. Weight: ${product.dimensions.weight}g, Dimensions: ${product.dimensions.width}×${product.dimensions.height}mm.`;
 
   return {
     title,

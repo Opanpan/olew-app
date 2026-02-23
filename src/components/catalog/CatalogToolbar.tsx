@@ -34,8 +34,6 @@ export default function CatalogToolbar({
 
   const sortOptions = [
     { value: 'name', label: dict.catalog.sort.name },
-    { value: 'price-asc', label: dict.catalog.sort.price_asc },
-    { value: 'price-desc', label: dict.catalog.sort.price_desc },
     { value: 'newest', label: dict.catalog.sort.newest },
   ] as const;
 

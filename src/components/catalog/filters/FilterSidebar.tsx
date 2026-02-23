@@ -11,8 +11,6 @@ import { bottlesData, capsData } from '@/data/products';
 import FilterSection from './FilterSection';
 import TypeFilter from './TypeFilter';
 import RangeFilter from './RangeFilter';
-import PriceFilter from './PriceFilter';
-
 interface FilterSidebarProps {
   filters: FilterState;
   updateFilters: (filters: Partial<FilterState>) => void;
@@ -22,7 +20,6 @@ interface FilterSidebarProps {
     weight: [number, number];
     width: [number, number];
     height: [number, number];
-    price: [number, number];
   };
 }
 
@@ -105,15 +102,6 @@ export default function FilterSidebar({
           />
         </FilterSection>
 
-        {/* Price Range */}
-        <FilterSection title={dict.catalog.filters.price}>
-          <PriceFilter
-            value={filters.priceRange}
-            onChange={(priceRange) => updateFilters({ priceRange })}
-            min={defaultRanges.price[0]}
-            max={defaultRanges.price[1]}
-          />
-        </FilterSection>
       </div>
     </>
   );

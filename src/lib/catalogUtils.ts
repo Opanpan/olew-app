@@ -40,12 +40,6 @@ export function filterProducts(
       return false;
     }
 
-    // Price range filter
-    const [minPrice, maxPrice] = filters.priceRange;
-    if (product.price < minPrice || product.price > maxPrice) {
-      return false;
-    }
-
     // Search query filter
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
@@ -71,10 +65,6 @@ export function sortProducts(
   switch (sortBy) {
     case 'name':
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
-    case 'price-asc':
-      return sorted.sort((a, b) => a.price - b.price);
-    case 'price-desc':
-      return sorted.sort((a, b) => b.price - a.price);
     case 'newest':
       // Sort by newArrival first, then by name
       return sorted.sort((a, b) => {
@@ -94,27 +84,23 @@ export function getRangeExtents(products: Product[]): {
   weight: [number, number];
   width: [number, number];
   height: [number, number];
-  price: [number, number];
 } {
   if (products.length === 0) {
     return {
       weight: [0, 100],
       width: [0, 100],
       height: [0, 200],
-      price: [0, 10],
     };
   }
 
   const weights = products.map((p) => p.dimensions.weight);
   const widths = products.map((p) => p.dimensions.width);
   const heights = products.map((p) => p.dimensions.height);
-  const prices = products.map((p) => p.price);
 
   return {
     weight: [Math.min(...weights), Math.max(...weights)],
     width: [Math.min(...widths), Math.max(...widths)],
     height: [Math.min(...heights), Math.max(...heights)],
-    price: [Math.min(...prices), Math.max(...prices)],
   };
 }
 

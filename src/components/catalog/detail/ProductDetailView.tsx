@@ -217,9 +217,6 @@ export default function ProductDetailView({
                                     <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
                                       {cap.type}
                                     </p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-500 font-medium">
-                                      ${cap.price.toFixed(2)}
-                                    </p>
                                   </div>
                                 </div>
                               </button>
@@ -450,8 +447,6 @@ export default function ProductDetailView({
             <OrderForm
               productName={product.name}
               productId={product.id}
-              minOrder={product.minOrder}
-              price={product.price}
               selectedColor={selectedColor}
             />
           </div>

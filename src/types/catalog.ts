@@ -28,8 +28,6 @@ export interface ProductBase {
   name: string;
   type: BottleType | CapType;
   dimensions: ProductDimensions;
-  price: number; // USD
-  minOrder: number;
   image?: string;
   colors: string[];
   featured?: boolean;
@@ -54,7 +52,6 @@ export interface FilterState {
   weightRange: [number, number];
   widthRange: [number, number];
   heightRange: [number, number];
-  priceRange: [number, number];
   searchQuery: string;
-  sortBy: 'name' | 'price-asc' | 'price-desc' | 'newest';
+  sortBy: 'name' | 'newest';
 }

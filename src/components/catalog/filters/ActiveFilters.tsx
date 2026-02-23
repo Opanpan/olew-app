@@ -11,7 +11,6 @@ interface ActiveFiltersProps {
     weight: [number, number];
     width: [number, number];
     height: [number, number];
-    price: [number, number];
   };
   onRemoveType: (type: string) => void;
   onClearAll: () => void;
@@ -33,9 +32,7 @@ export default function ActiveFilters({
     filters.widthRange[0] !== defaultRanges.width[0] ||
     filters.widthRange[1] !== defaultRanges.width[1] ||
     filters.heightRange[0] !== defaultRanges.height[0] ||
-    filters.heightRange[1] !== defaultRanges.height[1] ||
-    filters.priceRange[0] !== defaultRanges.price[0] ||
-    filters.priceRange[1] !== defaultRanges.price[1];
+    filters.heightRange[1] !== defaultRanges.height[1];
 
   if (!hasActiveFilters) return null;
 

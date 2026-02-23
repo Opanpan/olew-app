@@ -31,10 +31,6 @@ export function useCatalogFilters({ products }: UseCatalogFiltersOptions) {
       searchParams.get('height'),
       defaultRanges.height
     );
-    const priceRange = parseRangeParam(
-      searchParams.get('price'),
-      defaultRanges.price
-    );
     const searchQuery = searchParams.get('q') || '';
     const sortBy = (searchParams.get('sort') as FilterState['sortBy']) || 'name';
 
@@ -43,7 +39,6 @@ export function useCatalogFilters({ products }: UseCatalogFiltersOptions) {
       weightRange,
       widthRange,
       heightRange,
-      priceRange,
       searchQuery,
       sortBy,
     };
@@ -96,17 +91,6 @@ export function useCatalogFilters({ products }: UseCatalogFiltersOptions) {
         }
       }
 
-      // Update price range
-      if (newFilters.priceRange !== undefined) {
-        const [min, max] = newFilters.priceRange;
-        const [defaultMin, defaultMax] = defaultRanges.price;
-        if (min !== defaultMin || max !== defaultMax) {
-          params.set('price', formatRangeParam(newFilters.priceRange));
-        } else {
-          params.delete('price');
-        }
-      }
-
       // Update search query
       if (newFilters.searchQuery !== undefined) {
         if (newFilters.searchQuery) {
@@ -147,9 +131,7 @@ export function useCatalogFilters({ products }: UseCatalogFiltersOptions) {
       filters.widthRange[0] !== defaultRanges.width[0] ||
       filters.widthRange[1] !== defaultRanges.width[1] ||
       filters.heightRange[0] !== defaultRanges.height[0] ||
-      filters.heightRange[1] !== defaultRanges.height[1] ||
-      filters.priceRange[0] !== defaultRanges.price[0] ||
-      filters.priceRange[1] !== defaultRanges.price[1]
+      filters.heightRange[1] !== defaultRanges.height[1]
     );
   }, [filters, defaultRanges]);
 

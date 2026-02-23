@@ -140,29 +140,6 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-gray-100 dark:border-gray-800 my-3 md:my-4" />
-
-        {/* Price & Min Order */}
-        <div className="flex items-end justify-between mb-3 md:mb-4">
-          <div>
-            <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 block mb-0.5 md:mb-1">
-              {dict.catalog.product_card.from}
-            </span>
-            <p className="text-lg md:text-xl lg:text-2xl font-bold text-primary-600 dark:text-primary-400">
-              ${product.price.toFixed(2)}
-            </p>
-          </div>
-          <div className="text-right">
-            <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 block mb-0.5 md:mb-1">
-              {dict.catalog.product_card.min_order}
-            </span>
-            <p className="text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {product.minOrder.toLocaleString()} {dict.catalog.product_card.pieces}
-            </p>
-          </div>
-        </div>
-
         {/* View Details Button - Pushed to bottom */}
         <Link
           href={detailUrl}

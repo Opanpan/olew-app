@@ -9,36 +9,30 @@ import { useLang } from '@/lib/LangContext';
 interface OrderFormProps {
   productName: string;
   productId: string;
-  minOrder: number;
-  price: number;
   selectedColor: string;
 }
 
 export default function OrderForm({
   productName,
   productId,
-  minOrder,
-  price,
   selectedColor,
 }: OrderFormProps) {
   const { dict } = useLang();
-  const [quantity, setQuantity] = useState(minOrder);
+  const [quantity, setQuantity] = useState(1);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const incrementQuantity = () => {
-    setQuantity((prev) => prev + Math.max(100, Math.floor(minOrder / 10)));
+    setQuantity((prev) => prev + 100);
   };
 
   const decrementQuantity = () => {
-    setQuantity((prev) => Math.max(minOrder, prev - Math.max(100, Math.floor(minOrder / 10))));
+    setQuantity((prev) => Math.max(1, prev - 100));
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || minOrder;
-    setQuantity(Math.max(minOrder, value));
+    const value = parseInt(e.target.value) || 1;
+    setQuantity(Math.max(1, value));
   };
-
-  const totalPrice = (quantity * price).toFixed(2);
 
   const handleAddToInquiry = () => {
     // In real implementation, this would add to cart/inquiry
@@ -55,31 +49,6 @@ export default function OrderForm({
 
   return (
     <div className="space-y-3 md:space-y-6">
-      {/* Price Display */}
-      <div className="p-3 md:p-6 rounded-xl md:rounded-2xl bg-gradient-to-br from-primary-50 to-sky-50 dark:from-primary-950/30 dark:to-sky-950/30 border border-primary-100 dark:border-primary-900">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-              {dict.catalog.product_detail.unit_price}
-            </p>
-            <p className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-primary-600 dark:text-primary-400">
-              ${price.toFixed(2)}
-            </p>
-          </div>
-          <div className="text-right min-w-0">
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-              {dict.catalog.product_detail.total_price}
-            </p>
-            <p className="text-base sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-              ${totalPrice}
-            </p>
-          </div>
-        </div>
-        <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 mt-2 md:mt-4">
-          {dict.catalog.product_detail.minimum_order}: {minOrder.toLocaleString()} {dict.catalog.product_detail.pieces}
-        </p>
-      </div>
-
       {/* Quantity Selector */}
       <div className="space-y-3">
         <label className="text-xs md:text-base font-semibold text-gray-900 dark:text-white">
@@ -88,10 +57,10 @@ export default function OrderForm({
         <div className="flex items-center gap-2 md:gap-3">
           <button
             onClick={decrementQuantity}
-            disabled={quantity <= minOrder}
+            disabled={quantity <= 1}
             className={cn(
               'p-2 md:p-4 rounded-lg md:rounded-xl transition-all min-h-[40px] md:min-h-[48px] flex items-center justify-center',
-              quantity <= minOrder
+              quantity <= 1
                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                 : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50'
             )}
@@ -104,8 +73,8 @@ export default function OrderForm({
             type="number"
             value={quantity}
             onChange={handleQuantityChange}
-            min={minOrder}
-            step={Math.max(100, Math.floor(minOrder / 10))}
+            min={1}
+            step={100}
             className={cn(
               'flex-1 px-2 md:px-4 py-2 md:py-4 rounded-lg md:rounded-xl text-center',
               'bg-white dark:bg-gray-900',
@@ -125,7 +94,7 @@ export default function OrderForm({
           </button>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {dict.catalog.product_detail.step}: {Math.max(100, Math.floor(minOrder / 10))} {dict.catalog.product_detail.pieces}
+          {dict.catalog.product_detail.step}: 100 {dict.catalog.product_detail.pieces}
         </p>
       </div>
 
