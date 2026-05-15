@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { Providers } from '@/components/Providers';
 import { LangProvider } from '@/lib/LangContext';
+import { CompareProvider } from '@/lib/CompareContext';
 import Navigation from '@/components/layout/Navigation';
 import Footer from '@/components/layout/Footer';
+import CompareBar from '@/components/catalog/CompareBar';
 import type { Lang } from '@/lib/dictionary';
 
 const validLangs = ['en', 'id'];
@@ -27,11 +29,14 @@ export default function LangLayout({
   return (
     <LangProvider lang={lang as Lang}>
       <Providers>
-        <div className="flex flex-col min-h-screen">
-          <Navigation />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+        <CompareProvider>
+          <div className="flex flex-col min-h-screen">
+            <Navigation />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <CompareBar />
+          </div>
+        </CompareProvider>
       </Providers>
     </LangProvider>
   );

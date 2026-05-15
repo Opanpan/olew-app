@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Droplet, Package, Award, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Droplet, Package, Award, Sparkles, ArrowLeftRight, Check } from 'lucide-react';
 import { Product } from '@/types/catalog';
 import { useLang } from '@/lib/LangContext';
+import { useCompare } from '@/lib/CompareContext';
 import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
@@ -14,6 +16,18 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { lang, dict } = useLang();
+  const { toggle, has, canAdd } = useCompare();
+  const [showMaxMsg, setShowMaxMsg] = useState(false);
+  const isComparing = has(product.id);
+
+  const handleCompareToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const ok = toggle(product);
+    if (!ok) {
+      setShowMaxMsg(true);
+      setTimeout(() => setShowMaxMsg(false), 2000);
+    }
+  };
 
   // Choose icon based on product category
   const Icon = product.category === 'bottle' ? Droplet : Package;
@@ -140,14 +154,51 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           </div>
         </div>
 
-        {/* View Details Button - Pushed to bottom */}
-        <Link
-          href={detailUrl}
-          className="btn-primary w-full text-xs md:text-sm px-4 md:px-6 py-3 md:py-3.5 min-h-[44px] mt-auto flex items-center justify-center"
-          aria-label={`View details for ${product.name}`}
-        >
-          {dict.catalog.product_card.view_details}
-        </Link>
+        {/* Action buttons - pushed to bottom */}
+        <div className="mt-auto space-y-2">
+          {/* Compare toggle */}
+          <AnimatePresence mode="wait">
+            {showMaxMsg ? (
+              <motion.div
+                key="max"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="w-full py-2.5 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-center text-xs font-medium text-amber-700 dark:text-amber-300"
+              >
+                {dict.catalog.compare.max_reached}
+              </motion.div>
+            ) : (
+              <motion.button
+                key="btn"
+                onClick={handleCompareToggle}
+                whileTap={{ scale: 0.97 }}
+                disabled={!isComparing && !canAdd}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-xs font-semibold transition-all duration-300 border-2',
+                  isComparing
+                    ? 'bg-primary-500 text-white border-primary-500 shadow-md shadow-primary-500/25'
+                    : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400'
+                )}
+              >
+                {isComparing ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                )}
+                {isComparing ? dict.catalog.compare.added : dict.catalog.compare.toggle}
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          <Link
+            href={detailUrl}
+            className="btn-primary w-full text-xs md:text-sm px-4 md:px-6 py-3 md:py-3.5 min-h-[44px] flex items-center justify-center"
+            aria-label={`View details for ${product.name}`}
+          >
+            {dict.catalog.product_card.view_details}
+          </Link>
+        </div>
       </div>
     </motion.article>
   );
