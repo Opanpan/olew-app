@@ -44,7 +44,7 @@ export const colorToHex: Record<string, string> = {
 };
 
 // Tailwind classes for UI display
-const colorClassMap: Record<string, string> = {
+export const colorClassMap: Record<string, string> = {
   'Amber': 'bg-amber-600',
   'Clear': 'bg-gray-100 border-2 border-gray-300',
   'Cobalt Blue': 'bg-blue-600',
