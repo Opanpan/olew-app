@@ -1,27 +1,29 @@
-version: '3.8'
-
 services:
-  olew-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    container_name: olew-group-dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    environment:
-      - NODE_ENV=development
-
-  olew-prod:
+  olew-app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: olew-group-prod
-    ports:
-      - "3000:3000"
+    container_name: olew-group
+    restart: unless-stopped
+    expose:
+      - "3000"
     environment:
       - NODE_ENV=production
-    restart: unless-stopped
+      - NEXT_TELEMETRY_DISABLED=1
+      - VIRTUAL_HOST=welo-app.kinderheim511.com
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=welo-app.kinderheim511.com
+      - LETSENCRYPT_EMAIL=fanalriansyah@gmail.com
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    external: true
+    name: proxy-network
