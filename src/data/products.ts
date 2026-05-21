@@ -158,6 +158,26 @@ export const bottlesData: Bottle[] = [
     dimensions: { weight: 28, width: 20, height: 68, capacity: 20 },
     colors: ['Clear', 'Amber'],
   },
+  {
+    id: 'BTL-019',
+    category: 'bottle',
+    name: 'Sampling Bottle Type A',
+    type: 'Dropper Bottle',
+    dimensions: { weight: 52, width: 30, height: 105, capacity: 40 },
+    modelUrl: '/images/3d/sampling-01.glb',
+    colors: ['Clear', 'Amber', 'White'],
+    newArrival: true,
+  },
+  {
+    id: 'BTL-020',
+    category: 'bottle',
+    name: 'Sampling Bottle Type B',
+    type: 'Pump Bottle',
+    dimensions: { weight: 78, width: 38, height: 125, capacity: 80 },
+    modelUrl: '/images/3d/sampling-02.glb',
+    colors: ['White', 'Matte Black', 'Gold'],
+    newArrival: true,
+  },
 ];
 
 export const capsData: Cap[] = [
