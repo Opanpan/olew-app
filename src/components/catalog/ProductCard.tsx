@@ -76,7 +76,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               className="px-2 py-1 md:px-3 md:py-1.5 rounded-full bg-accent-gold text-white text-[10px] md:text-xs font-semibold shadow-lg backdrop-blur-sm"
             >
               <Award className="w-2.5 h-2.5 md:w-3 md:h-3 inline mr-0.5 md:mr-1" />
-              Featured
+              {dict.catalog.product_card.featured}
             </motion.div>
           )}
           {product.bestSeller && (
@@ -86,7 +86,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               transition={{ delay: 0.3 + index * 0.1 }}
               className="px-2 py-1 md:px-3 md:py-1.5 rounded-full bg-primary-500 text-white text-[10px] md:text-xs font-semibold shadow-lg"
             >
-              Best Seller
+              {dict.catalog.product_card.best_seller}
             </motion.div>
           )}
           {product.newArrival && (
@@ -97,7 +97,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               className="px-2 py-1 md:px-3 md:py-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] md:text-xs font-semibold shadow-lg"
             >
               <Sparkles className="w-2.5 h-2.5 md:w-3 md:h-3 inline mr-0.5 md:mr-1" />
-              New
+              {dict.catalog.product_card.new_arrival}
             </motion.div>
           )}
         </div>
@@ -136,7 +136,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 
         {/* Colors */}
         <div className="flex items-center gap-2 mb-3 md:mb-4">
-          <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Colors:</span>
+          <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">{dict.catalog.product_card.colors}:</span>
           <div className="flex gap-1 md:gap-1.5">
             {product.colors.slice(0, 3).map((color, i) => (
               <div
