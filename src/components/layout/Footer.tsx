@@ -81,12 +81,12 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">{dict.footer.follow_us}</h4>
             <p className="text-gray-400 text-sm mb-4">
-              Stay updated with our latest products and innovations.
+              {dict.footer.newsletter_desc}
             </p>
             <form className="flex gap-2">
               <input
                 type="email"
-                placeholder="Your email"
+                placeholder={dict.footer.email_placeholder}
                 className="flex-1 px-4 py-2 rounded-lg text-sm bg-white/10 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
               />
               <button type="submit" className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors text-sm font-medium">
