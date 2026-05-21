@@ -19,7 +19,8 @@ export default function RelatedProducts({
   allProducts,
   maxItems = 4,
 }: RelatedProductsProps) {
-  const { lang } = useLang();
+  const { lang, dict } = useLang();
+  const d = dict.catalog.product_detail;
 
   // Find related products based on type similarity
   const relatedProducts = useMemo(() => {
@@ -53,7 +54,7 @@ export default function RelatedProducts({
               viewport={{ once: true }}
               className="font-display text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2"
             >
-              Related Products
+              {d.related_products}
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -62,7 +63,7 @@ export default function RelatedProducts({
               transition={{ delay: 0.1 }}
               className="text-sm md:text-base text-gray-600 dark:text-gray-400"
             >
-              You might also be interested in these products
+              {d.related_desc}
             </motion.p>
           </div>
 
@@ -70,7 +71,7 @@ export default function RelatedProducts({
             href={`/${lang}/${currentProduct.category === 'bottle' ? 'bottles' : 'caps'}`}
             className="hidden md:flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:gap-3 transition-all font-medium group"
           >
-            View All
+            {d.view_all}
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -87,7 +88,7 @@ export default function RelatedProducts({
           href={`/${lang}/${currentProduct.category === 'bottle' ? 'bottles' : 'caps'}`}
           className="md:hidden mt-8 btn-outline w-full flex items-center justify-center gap-2 py-4 min-h-[48px]"
         >
-          View All Products
+          {d.view_all_products}
           <ArrowRight className="w-5 h-5" />
         </Link>
       </div>
