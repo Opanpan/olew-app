@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas, useLoader } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, useGLTF } from '@react-three/drei';
@@ -35,32 +35,49 @@ interface Product3DViewerProps {
   capPositionY?: number;
   productColorConfig?: ColorConfig;
   capColorConfig?: ColorConfig;
+  compact?: boolean;
 }
 
 // ─── 3D Models ───────────────────────────────────────────────────────────────
 
 function BottleModel({ url, color, scale = 1 }: { url: string; color: string; scale?: number }) {
   const gltf = useLoader(GLTFLoader, url);
-  const meshRef = useRef<THREE.Group>(null);
-  const scene = gltf.scene.clone();
+  // Clone once per GLTF load — never on color change
+  const scene = useMemo(() => {
+    const s = gltf.scene.clone(true);
+    s.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.1 });
+      }
+    });
+    return s;
+  }, [gltf.scene]);
+  // Update material color in-place (no new objects, no R3F remount)
   scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.material = new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.3, metalness: 0.1 });
+    if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+      child.material.color.set(color);
     }
   });
-  return <group ref={meshRef}><primitive object={scene} scale={scale} /></group>;
+  return <primitive object={scene} scale={scale} />;
 }
 
 function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0 }: { url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number }) {
   const gltf = useLoader(GLTFLoader, url);
-  const meshRef = useRef<THREE.Group>(null);
-  const scene = gltf.scene.clone();
+  const scene = useMemo(() => {
+    const s = gltf.scene.clone(true);
+    s.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.3 });
+      }
+    });
+    return s;
+  }, [gltf.scene]);
   scene.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.material = new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.4, metalness: 0.3 });
+    if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+      child.material.color.set(color);
     }
   });
-  return <group ref={meshRef} position={[0, bottleHeight + positionY, 0]}><primitive object={scene} scale={scale} /></group>;
+  return <group position={[0, bottleHeight + positionY, 0]}><primitive object={scene} scale={scale} /></group>;
 }
 
 function PlaceholderModel({ color, type }: { color: string; type: 'bottle' | 'cap' }) {
@@ -102,6 +119,8 @@ interface ColorPickerPortalProps {
 }
 
 function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPortalProps) {
+  const { dict } = useLang();
+  const d = dict.catalog.product_detail;
   const [mounted, setMounted] = useState(false);
   const [hexInput, setHexInput] = useState(config.customColor || '#ffffff');
 
@@ -163,7 +182,7 @@ function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPor
 
       {/* Preset swatches for quick pick */}
       <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">Quick pick</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">{d.quick_pick}</p>
         <div className="flex flex-wrap gap-2">
           {config.colors.map((color) => {
             const isSelected = !config.isCustom && config.selectedColor === color;
@@ -197,7 +216,7 @@ function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPor
         onClick={onApply}
         className="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
       >
-        Apply Color
+        {d.apply_color}
       </button>
     </div>
   );
@@ -215,87 +234,51 @@ function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPor
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] bg-black/50"
             onClick={onCancel}
           />
 
-          {/* ── Desktop modal ── */}
-          <motion.div
-            key="modal"
-            initial={{ opacity: 0, scale: 0.94, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: -10 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-            className="fixed inset-0 m-auto z-[201] w-[340px] h-fit rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl p-5 hidden md:block"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 flex items-center justify-center">
-                  <Droplets className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
-                    Custom Color
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{config.label}</p>
-                </div>
+          {/* Single responsive modal — bottom sheet on mobile, centered on desktop */}
+          <div className="fixed inset-0 z-[201] flex items-end md:items-center justify-center pointer-events-none">
+            <motion.div
+              key="modal"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="pointer-events-auto w-full md:w-[340px] rounded-t-3xl md:rounded-2xl bg-white dark:bg-gray-900 border-t md:border border-gray-200 dark:border-gray-800 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Mobile drag handle */}
+              <div className="flex justify-center pt-3 pb-1 md:hidden">
+                <div className="w-10 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700" />
               </div>
-              <button
-                onClick={onCancel}
-                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
-            {pickerContent}
-          </motion.div>
 
-          {/* ── Mobile drawer ── */}
-          <motion.div
-            key="drawer"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={{ top: 0, bottom: 0.3 }}
-            onDragEnd={(_, info) => { if (info.offset.y > 80) onCancel(); }}
-            className="fixed bottom-0 left-0 right-0 z-[201] rounded-t-3xl bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-2xl pb-safe md:hidden"
-            style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700" />
-            </div>
-
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/50 flex items-center justify-center">
-                  <Droplets className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 flex items-center justify-center">
+                    <Droplets className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">{d.custom_color}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{config.label}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
-                    Custom Color
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{config.label}</p>
-                </div>
+                <button
+                  onClick={onCancel}
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
               </div>
-              <button
-                onClick={onCancel}
-                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              </button>
-            </div>
 
-            {/* Drawer body */}
-            <div className="px-5 py-4">
-              {pickerContent}
-            </div>
-          </motion.div>
+              {/* Body — single picker instance */}
+              <div className="p-5" style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
+                {pickerContent}
+              </div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>,
@@ -305,9 +288,12 @@ function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPor
 
 // ─── Color Swatch Panel (overlay inside viewer) ───────────────────────────────
 
-function ColorSwatchPanel({ config }: { config: ColorConfig }) {
+function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig; onOpenChange?: (open: boolean) => void }) {
   const [showPicker, setShowPicker] = useState(false);
   const snapshot = useRef<{ selectedColor: string; customColor: string; isCustom: boolean } | null>(null);
+
+  const openPicker = () => { setShowPicker(true); onOpenChange?.(true); };
+  const closePicker = () => { setShowPicker(false); onOpenChange?.(false); };
 
   const handleOpen = () => {
     snapshot.current = {
@@ -315,12 +301,12 @@ function ColorSwatchPanel({ config }: { config: ColorConfig }) {
       customColor: config.customColor,
       isCustom: config.isCustom,
     };
-    setShowPicker(true);
+    openPicker();
   };
 
   const handleApply = () => {
     snapshot.current = null;
-    setShowPicker(false);
+    closePicker();
   };
 
   const handleCancel = () => {
@@ -330,7 +316,7 @@ function ColorSwatchPanel({ config }: { config: ColorConfig }) {
       config.onIsCustomChange(snapshot.current.isCustom);
       snapshot.current = null;
     }
-    setShowPicker(false);
+    closePicker();
   };
 
   return (
@@ -416,9 +402,11 @@ export default function Product3DViewer({
   capPositionY = 0,
   productColorConfig,
   capColorConfig,
+  compact = false,
 }: Product3DViewerProps) {
   const { dict } = useLang();
   const [resetKey, setResetKey] = useState(0);
+  const [anyPickerOpen, setAnyPickerOpen] = useState(false);
 
   const hasColors = productColorConfig || capColorConfig;
 
@@ -428,25 +416,29 @@ export default function Product3DViewer({
       style={{ touchAction: 'none' }}
     >
       {/* Reset Camera Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setResetKey((p) => p + 1)}
-        className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all"
-        title={dict.catalog.product_detail.reset_camera}
-      >
-        <RotateCcw className="w-5 h-5 text-gray-900 dark:text-white" />
-      </motion.button>
+      {!compact && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setResetKey((p) => p + 1)}
+          className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all"
+          title={dict.catalog.product_detail.reset_camera}
+        >
+          <RotateCcw className="w-5 h-5 text-gray-900 dark:text-white" />
+        </motion.button>
+      )}
 
       {/* Instructions */}
-      <div className={cn(
-        'absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm transition-all',
-        hasColors ? 'bottom-[100px]' : 'bottom-4'
-      )}>
-        <p className="text-xs text-white font-medium whitespace-nowrap">
-          {dict.catalog.product_detail.drag_to_rotate}
-        </p>
-      </div>
+      {!compact && (
+        <div className={cn(
+          'absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm transition-all',
+          hasColors ? 'bottom-[100px]' : 'bottom-4'
+        )}>
+          <p className="text-xs text-white font-medium whitespace-nowrap">
+            {dict.catalog.product_detail.drag_to_rotate}
+          </p>
+        </div>
+      )}
 
       {/* 3D Canvas */}
       <Canvas
@@ -473,6 +465,7 @@ export default function Product3DViewer({
           <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={3} blur={2} far={2} />
           <OrbitControls
             makeDefault
+            enabled={!anyPickerOpen}
             enablePan={false}
             enableZoom={true}
             enableRotate={true}
@@ -499,8 +492,8 @@ export default function Product3DViewer({
             'flex gap-2',
             productColorConfig && capColorConfig ? 'justify-between' : 'justify-start'
           )}>
-            {productColorConfig && <ColorSwatchPanel config={productColorConfig} />}
-            {capColorConfig && <ColorSwatchPanel config={capColorConfig} />}
+            {productColorConfig && <ColorSwatchPanel config={productColorConfig} onOpenChange={setAnyPickerOpen} />}
+            {capColorConfig && <ColorSwatchPanel config={capColorConfig} onOpenChange={setAnyPickerOpen} />}
           </div>
         </div>
       )}
