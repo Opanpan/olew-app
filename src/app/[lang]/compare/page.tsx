@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 import {
   ArrowLeft, X, Droplet, Package, Award, Sparkles, ChevronRight,
   Ruler, Weight, Layers, Tag, Hash, Palette, Check, Minus,
-  TrendingUp, TrendingDown, ArrowLeftRight,
+  TrendingUp, TrendingDown, ArrowLeftRight, Box, Image as ImageIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { bottlesData, capsData } from '@/data/products';
 import { useLang } from '@/lib/LangContext';
 import { useCompare } from '@/lib/CompareContext';
@@ -17,6 +18,11 @@ import { cn } from '@/lib/utils';
 import type { Product } from '@/types/catalog';
 
 const allProducts: Product[] = [...bottlesData, ...capsData];
+
+const Product3DViewer = dynamic(
+  () => import('@/components/catalog/detail/Product3DViewer'),
+  { ssr: false, loading: () => <div className="w-full aspect-square rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" /> }
+);
 
 // ── numeric bar ───────────────────────────────────────────────────────────────
 
@@ -111,6 +117,21 @@ function SectionHeader({ title, colCount }: { title: string; colCount: 2 | 3 | 4
   );
 }
 
+// ── per-product 3D viewer cell (manages own color state) ─────────────────────
+
+function ViewerCell({ product }: { product: Product }) {
+  const defaultColor = colorToHex[product.colors[0]] || '#ffffff';
+  return (
+    <Product3DViewer
+      bottleModelUrl={product.modelUrl || '/images/3d/base.glb'}
+      bottleColor={defaultColor}
+      capColor="#000000"
+      productCategory={product.category}
+      compact
+    />
+  );
+}
+
 // ── page ──────────────────────────────────────────────────────────────────────
 
 export default function ComparePage() {
@@ -126,6 +147,8 @@ export default function ComparePage() {
     () => localIds.map(id => allProducts.find(p => p.id === id)).filter(Boolean) as Product[],
     [localIds]
   );
+
+  const [show3D, setShow3D] = useState(false);
 
   const removeProduct = (id: string) => {
     setLocalIds(prev => prev.filter(x => x !== id));
@@ -203,17 +226,27 @@ export default function ComparePage() {
           <X className="w-3 h-3" />
         </button>
 
-        <div className={cn(
-          'rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center flex-shrink-0',
-          mobileMode ? 'w-full h-16' : 'w-full h-24'
-        )}>
-          {product.image ? (
-            <img src={product.image} alt={product.name} className="w-full h-full object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          ) : (
-            <Icon className={cn('text-gray-300 dark:text-gray-600', mobileMode ? 'w-7 h-7' : 'w-10 h-10')} />
-          )}
-        </div>
+        {show3D ? (
+          <div className={cn(
+            'w-full flex-shrink-0 overflow-hidden rounded-lg',
+            '[&>div]:!aspect-auto [&>div]:h-full',
+            mobileMode ? 'h-40' : 'h-64',
+          )}>
+            <ViewerCell product={product} />
+          </div>
+        ) : (
+          <div className={cn(
+            'relative rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center flex-shrink-0',
+            mobileMode ? 'w-full h-16' : 'w-full h-24'
+          )}>
+            {product.image ? (
+              <img src={product.image} alt={product.name} className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            ) : (
+              <Icon className={cn('text-gray-300 dark:text-gray-600', mobileMode ? 'w-7 h-7' : 'w-10 h-10')} />
+            )}
+          </div>
+        )}
 
         <span className={cn(
           'self-start inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full font-semibold text-[9px]',
@@ -233,17 +266,17 @@ export default function ComparePage() {
         <div className="flex flex-wrap gap-1">
           {product.featured && (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold">
-              <Award className="w-2 h-2" />Featured
+              <Award className="w-2 h-2" />{c.featured}
             </span>
           )}
           {product.bestSeller && (
             <span className="px-1.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[9px] font-bold">
-              Best Seller
+              {c.best_seller}
             </span>
           )}
           {product.newArrival && (
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-700 dark:text-purple-300 text-[9px] font-bold">
-              <Sparkles className="w-2 h-2" />New
+              <Sparkles className="w-2 h-2" />{c.new_arrival}
             </span>
           )}
         </div>
@@ -297,7 +330,7 @@ export default function ComparePage() {
           <span className="text-primary-500 dark:text-primary-400 flex-shrink-0">{icon}</span>
           <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide leading-tight">{label}</span>
           {diff && (
-            <span className="text-[8px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded-full w-fit">diff</span>
+            <span className="text-[8px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 rounded-full w-fit">{c.diff}</span>
           )}
         </div>
         {values.map((val, i) => (
@@ -404,12 +437,22 @@ export default function ComparePage() {
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white/80 text-xs font-medium mb-2 md:mb-3">
                 <ArrowLeftRight className="w-3.5 h-3.5" />
-                {products.length} products
+                {c.x_products.replace('{count}', String(products.length))}
               </div>
               <h1 className="text-2xl md:text-4xl font-bold text-white mb-1">{c.page_title}</h1>
               <p className="text-white/70 text-xs md:text-sm">{c.page_subtitle}</p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShow3D(v => !v)}
+                className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs md:text-sm font-medium hover:bg-white/20 transition-colors"
+              >
+                {show3D ? (
+                  <><ImageIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">{c.view_2d}</span></>
+                ) : (
+                  <><Box className="w-3.5 h-3.5" /><span className="hidden sm:inline">{c.view_3d}</span></>
+                )}
+              </button>
               <Link href={`/${lang}/bottles`}
                 className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs md:text-sm font-medium hover:bg-white/20 transition-colors">
                 <ArrowLeft className="w-3.5 h-3.5" />
@@ -443,10 +486,11 @@ export default function ComparePage() {
                 'sticky top-16 z-20 border-b-2 border-primary-100 dark:border-primary-900/50 bg-white dark:bg-gray-900 shadow-sm rounded-t-2xl'
               )}>
                 <div className="sticky left-0 z-10 flex items-end px-2 pb-3 pt-4 border-r border-gray-100 dark:border-gray-800 rounded-tl-2xl bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
-                  <span className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Specs</span>
+                  <span className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{c.specs_label}</span>
                 </div>
                 {products.map((p, i) => (
                   <div key={p.id} className={cn(
+                    'overflow-hidden',
                     i < products.length - 1 && 'border-r border-gray-100 dark:border-gray-800',
                     i === products.length - 1 && 'rounded-tr-2xl',
                     i === 0 && 'bg-gradient-to-b from-primary-50/40 to-white dark:from-primary-900/10 dark:to-gray-900',
@@ -493,7 +537,7 @@ export default function ComparePage() {
                 colCount === 4 && 'grid-cols-[160px_1fr_1fr_1fr_1fr]',
               )}>
                 <div className="flex items-end px-4 pb-4 pt-6 border-r border-gray-100 dark:border-gray-800 rounded-tl-2xl bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-800/50 dark:to-gray-900">
-                  <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Specs</span>
+                  <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{c.specs_label}</span>
                 </div>
                 {products.map((product, i) => (
                   <div key={product.id} className={cn(
@@ -533,15 +577,15 @@ export default function ComparePage() {
           className="mt-4 flex flex-wrap gap-3 md:gap-4 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-4 rounded border-l-2 border-amber-400 bg-amber-50/80" />
-            <span>Highlighted = values differ</span>
+            <span>{c.legend_diff}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-1.5 rounded-full bg-emerald-500" />
-            <span>Largest</span>
+            <span>{c.largest}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-1.5 rounded-full bg-primary-400" />
-            <span>Smallest</span>
+            <span>{c.smallest}</span>
           </div>
         </motion.div>
       </div>
