@@ -29,6 +29,7 @@ export interface ProductBase {
   type: BottleType | CapType;
   dimensions: ProductDimensions;
   image?: string;
+  modelUrl?: string;
   colors: string[];
   featured?: boolean;
   newArrival?: boolean;
