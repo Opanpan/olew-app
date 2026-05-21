@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Product } from '@/types/catalog';
 
 const MAX_COMPARE = 4;
+const STORAGE_KEY = 'olew_compare_list';
 
 interface CompareCtx {
   list: Product[];
@@ -18,8 +19,31 @@ interface CompareCtx {
 
 const Ctx = createContext<CompareCtx | null>(null);
 
+function readStorage(): Product[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Product[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function CompareProvider({ children }: { children: React.ReactNode }) {
   const [list, setList] = useState<Product[]>([]);
+
+  // Hydrate from localStorage after mount
+  useEffect(() => {
+    setList(readStorage());
+  }, []);
+
+  // Sync to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // storage quota exceeded or unavailable — silently ignore
+    }
+  }, [list]);
 
   const toggle = (p: Product): boolean => {
     if (list.find(x => x.id === p.id)) {
