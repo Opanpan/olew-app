@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Palette, X } from 'lucide-react';
 import { HexColorPicker } from 'react-colorful';
 import { cn } from '@/lib/utils';
+import { useLang } from '@/lib/LangContext';
 
 interface EnhancedColorPickerProps {
   colors: string[];
@@ -79,6 +80,8 @@ export default function EnhancedColorPicker({
   label = 'Select Color',
   showCustomPicker = true,
 }: EnhancedColorPickerProps) {
+  const { dict } = useLang();
+  const d = dict.catalog.product_detail;
   const [showPicker, setShowPicker] = useState(false);
   const [hexInput, setHexInput] = useState(customColor);
   const [isCustom, setIsCustom] = useState(false);
@@ -131,7 +134,7 @@ export default function EnhancedColorPicker({
             )}
           >
             <Palette className="w-4 h-4" />
-            Custom Color
+            {d.custom_color}
             {showPicker && <X className="w-3 h-3" />}
           </motion.button>
         )}
@@ -159,7 +162,7 @@ export default function EnhancedColorPicker({
               {/* Hex Input */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                  Hex Color Code
+                  {d.hex_color_code}
                 </label>
                 <div className="flex gap-2 items-center">
                   <div
@@ -183,7 +186,7 @@ export default function EnhancedColorPicker({
                   />
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Enter a hex color code (e.g., #22c55e)
+                  {d.hex_placeholder}
                 </p>
               </div>
 
@@ -192,7 +195,7 @@ export default function EnhancedColorPicker({
                 onClick={() => setShowPicker(false)}
                 className="w-full btn-primary py-2.5 text-sm"
               >
-                Apply Custom Color
+                {d.apply_custom_color}
               </button>
             </div>
           </motion.div>
@@ -258,7 +261,7 @@ export default function EnhancedColorPicker({
       <div className="flex items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2 flex-1">
           <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-            Selected:
+            {d.selected}:
           </span>
           <span className="text-xs md:text-sm font-semibold text-gray-900 dark:text-white">
             {isCustom ? 'Custom' : selectedColor}
