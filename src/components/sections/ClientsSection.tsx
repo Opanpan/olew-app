@@ -1,33 +1,53 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
+import { getClients, type Client } from '@/lib/publicApi';
 
-const clients = [
+const fallbackClients = [
   'Brand Alpha', 'Luxe Beauty', 'Pure Essence', 'Natural Care', 'Glow Labs', 'Skin Radiance',
   'Aroma Plus', 'Bio Pharma', 'Wellness Co', 'Fresh Start', 'Elite Scents', 'Care Zone',
 ];
 
-function ClientLogo({ name }: { name: string }) {
-  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase();
+function ClientLogo({ name, logo_url }: { name: string; logo_url?: string }) {
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <div className="flex-shrink-0 mx-4 md:mx-6 w-28 h-16 md:w-36 md:h-20 flex items-center justify-center bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:scale-105 transition-all">
-      <div className="text-center">
-        <div className="font-display text-lg md:text-xl font-bold text-gray-400 dark:text-gray-500">{initials}</div>
-        <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[80px]">{name}</div>
-      </div>
+      {logo_url ? (
+        <img
+          src={logo_url}
+          alt={name}
+          className="w-full h-full object-contain p-3"
+        />
+      ) : (
+        <div className="text-center">
+          <div className="font-display text-lg md:text-xl font-bold text-gray-400 dark:text-gray-500">{initials}</div>
+          <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[80px]">{name}</div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function ClientsSection() {
   const { dict } = useLang();
+  const [clients, setClients] = useState<Client[]>([]);
 
-  const firstRow = clients.slice(0, 6);
-  const secondRow = clients.slice(6, 12);
+  useEffect(() => {
+    getClients().then(setClients);
+  }, []);
+
+  const useApi = clients.length > 0;
+
+  const apiFirstRow: Client[] = useApi ? clients.slice(0, Math.ceil(clients.length / 2)) : [];
+  const apiSecondRow: Client[] = useApi ? (clients.slice(Math.ceil(clients.length / 2)).length > 0 ? clients.slice(Math.ceil(clients.length / 2)) : clients) : [];
+
+  const fbFirstRow = fallbackClients.slice(0, 6);
+  const fbSecondRow = fallbackClients.slice(6, 12);
 
   return (
     <section id="clients" className="section-padding bg-white dark:bg-gray-900 overflow-hidden">
@@ -67,38 +87,44 @@ export default function ClientsSection() {
 
         {/* Marquee */}
         <div className="space-y-6">
-          {/* Row 1 - Left to Right */}
+          {/* Row 1 — left to right */}
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-white dark:from-gray-900 to-transparent z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-white dark:from-gray-900 to-transparent z-10" />
-
             <div className="flex overflow-hidden">
               <motion.div
                 className="flex"
                 animate={{ x: ['0%', '-50%'] }}
                 transition={{ x: { duration: 30, repeat: Infinity, ease: 'linear' } }}
               >
-                {[...firstRow, ...firstRow].map((client, idx) => (
-                  <ClientLogo key={`${client}-${idx}`} name={client} />
-                ))}
+                {useApi
+                  ? [...apiFirstRow, ...apiFirstRow].map((c, idx) => (
+                      <ClientLogo key={`${c.id}-${idx}`} name={c.name} logo_url={c.logo_url} />
+                    ))
+                  : [...fbFirstRow, ...fbFirstRow].map((name, idx) => (
+                      <ClientLogo key={`${name}-${idx}`} name={name} />
+                    ))}
               </motion.div>
             </div>
           </div>
 
-          {/* Row 2 - Right to Left */}
+          {/* Row 2 — right to left */}
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-r from-white dark:from-gray-900 to-transparent z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-20 md:w-32 bg-gradient-to-l from-white dark:from-gray-900 to-transparent z-10" />
-
             <div className="flex overflow-hidden">
               <motion.div
                 className="flex"
                 animate={{ x: ['-50%', '0%'] }}
                 transition={{ x: { duration: 25, repeat: Infinity, ease: 'linear' } }}
               >
-                {[...secondRow, ...secondRow].map((client, idx) => (
-                  <ClientLogo key={`${client}-${idx}`} name={client} />
-                ))}
+                {useApi
+                  ? [...apiSecondRow, ...apiSecondRow].map((c, idx) => (
+                      <ClientLogo key={`${c.id}-r2-${idx}`} name={c.name} logo_url={c.logo_url} />
+                    ))
+                  : [...fbSecondRow, ...fbSecondRow].map((name, idx) => (
+                      <ClientLogo key={`${name}-r2-${idx}`} name={name} />
+                    ))}
               </motion.div>
             </div>
           </div>
@@ -119,7 +145,6 @@ export default function ClientsSection() {
                 { value: '500+', label: 'Products Made' },
                 { value: '50M+', label: 'Bottles Produced' },
               ].map((stat) => {
-                // Parse the stat value to extract number and suffix
                 const match = stat.value.match(/^(\d+)([A-Z]?\+?)$/);
                 return (
                   <div key={stat.label} className="text-center">

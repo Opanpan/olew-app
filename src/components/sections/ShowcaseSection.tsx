@@ -7,6 +7,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
+import { getGallery, type GalleryItem } from '@/lib/publicApi';
 
 const gradients = [
   'from-rose-500 via-pink-500 to-fuchsia-600',
@@ -17,9 +18,34 @@ const gradients = [
 
 const icons = ['✨', '🆕', '👑', '🌿'];
 
+type DisplayItem = {
+  badge?: string;
+  icon?: string;
+  title: string;
+  desc?: string;
+  image_url?: string;
+};
+
+function buildItems(gallery: GalleryItem[], lang: string, dictItems: { badge: string; title: string }[]): DisplayItem[] {
+  if (gallery.length > 0) {
+    return gallery.map((g, i) => ({
+      icon: icons[i % icons.length],
+      title: lang === 'id' ? g.title_id : g.title_en,
+      desc: lang === 'id' ? g.description_id : g.description_en,
+      image_url: g.image_url,
+    }));
+  }
+  return dictItems.map((item, i) => ({
+    badge: item.badge,
+    icon: icons[i % icons.length],
+    title: item.title,
+  }));
+}
+
 export default function ShowcaseSection() {
-  const { dict } = useLang();
+  const { lang, dict } = useLang();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: 'center' },
@@ -33,6 +59,12 @@ export default function ShowcaseSection() {
     if (!emblaApi) return;
     emblaApi.on('select', () => setSelectedIndex(emblaApi.selectedScrollSnap()));
   }, [emblaApi]);
+
+  useEffect(() => {
+    getGallery().then(setGallery);
+  }, []);
+
+  const items = buildItems(gallery, lang, dict.showcase.items);
 
   return (
     <section className="relative py-20 md:py-32 overflow-hidden bg-gray-50 dark:bg-gray-950">
@@ -64,7 +96,7 @@ export default function ShowcaseSection() {
         <div className="relative -mx-4 md:-mx-8">
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
-              {dict.showcase.items.map((item, index) => (
+              {items.map((item, index) => (
                 <div key={index} className="flex-[0_0_85%] md:flex-[0_0_70%] lg:flex-[0_0_60%] min-w-0 px-2 md:px-4">
                   <div
                     className={cn(
@@ -72,49 +104,66 @@ export default function ShowcaseSection() {
                       selectedIndex === index ? 'scale-100 shadow-2xl' : 'scale-95 opacity-70'
                     )}
                   >
-                    <div className={cn('absolute inset-0 bg-gradient-to-br', gradients[index])} />
+                    {item.image_url ? (
+                      <>
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/20" />
+                      </>
+                    ) : (
+                      <>
+                        <div className={cn('absolute inset-0 bg-gradient-to-br', gradients[index % gradients.length])} />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="flex items-end gap-4">
+                            <svg viewBox="0 0 100 240" className="w-12 md:w-20 h-auto drop-shadow-2xl -rotate-6" fill="none">
+                              <rect x="35" y="5" width="30" height="18" rx="3" fill="rgba(255,255,255,0.9)" />
+                              <path d="M35 23 L35 45 Q25 52 25 65 L25 210 Q25 225 40 225 L60 225 Q75 225 75 210 L75 65 Q75 52 65 45 L65 23" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                            </svg>
+                            <svg viewBox="0 0 120 280" className="w-20 md:w-28 h-auto drop-shadow-2xl" fill="none">
+                              <rect x="40" y="8" width="40" height="22" rx="3" fill="rgba(255,255,255,0.95)" />
+                              <path d="M40 30 L40 55 Q30 63 30 78 L30 245 Q30 262 48 262 L72 262 Q90 262 90 245 L90 78 Q90 63 80 55 L80 30" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
+                              <rect x="38" y="130" width="44" height="60" rx="3" fill="rgba(255,255,255,0.35)" />
+                              <text x="60" y="165" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">OLEW</text>
+                            </svg>
+                            <svg viewBox="0 0 100 240" className="w-12 md:w-20 h-auto drop-shadow-2xl rotate-6" fill="none">
+                              <ellipse cx="50" cy="12" rx="16" ry="8" fill="rgba(255,255,255,0.9)" />
+                              <ellipse cx="50" cy="40" rx="28" ry="15" fill="rgba(255,255,255,0.3)" />
+                              <path d="M22 40 Q22 50 26 85 L26 200 Q26 218 50 218 Q74 218 74 200 L74 85 Q78 50 78 40" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+                            </svg>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
-                    {/* Bottles Display */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="flex items-end gap-4">
-                        <svg viewBox="0 0 100 240" className="w-12 md:w-20 h-auto drop-shadow-2xl -rotate-6" fill="none">
-                          <rect x="35" y="5" width="30" height="18" rx="3" fill="rgba(255,255,255,0.9)" />
-                          <path d="M35 23 L35 45 Q25 52 25 65 L25 210 Q25 225 40 225 L60 225 Q75 225 75 210 L75 65 Q75 52 65 45 L65 23" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                        </svg>
-                        <svg viewBox="0 0 120 280" className="w-20 md:w-28 h-auto drop-shadow-2xl" fill="none">
-                          <rect x="40" y="8" width="40" height="22" rx="3" fill="rgba(255,255,255,0.95)" />
-                          <path d="M40 30 L40 55 Q30 63 30 78 L30 245 Q30 262 48 262 L72 262 Q90 262 90 245 L90 78 Q90 63 80 55 L80 30" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
-                          <rect x="38" y="130" width="44" height="60" rx="3" fill="rgba(255,255,255,0.35)" />
-                          <text x="60" y="165" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">OLEW</text>
-                        </svg>
-                        <svg viewBox="0 0 100 240" className="w-12 md:w-20 h-auto drop-shadow-2xl rotate-6" fill="none">
-                          <ellipse cx="50" cy="12" rx="16" ry="8" fill="rgba(255,255,255,0.9)" />
-                          <ellipse cx="50" cy="40" rx="28" ry="15" fill="rgba(255,255,255,0.3)" />
-                          <path d="M22 40 Q22 50 26 85 L26 200 Q26 218 50 218 Q74 218 74 200 L74 85 Q78 50 78 40" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                        </svg>
+                    {item.badge && (
+                      <div className="absolute top-6 left-6">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
+                          {item.icon && <span className="text-lg">{item.icon}</span>}
+                          <span className="text-white font-semibold text-sm">{item.badge}</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Badge */}
-                    <div className="absolute top-6 left-6">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-                        <span className="text-lg">{icons[index]}</span>
-                        <span className="text-white font-semibold text-sm">{item.badge}</span>
-                      </div>
-                    </div>
-
-                    {/* Title */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/40 to-transparent">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/50 to-transparent">
                       <AnimatePresence mode="wait">
                         {selectedIndex === index && (
-                          <motion.h3
+                          <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="font-display text-xl md:text-3xl font-bold text-white"
                           >
-                            {item.title}
-                          </motion.h3>
+                            <h3 className="font-display text-xl md:text-3xl font-bold text-white">
+                              {item.title}
+                            </h3>
+                            {item.desc && (
+                              <p className="mt-1 text-white/80 text-sm md:text-base line-clamp-2">
+                                {item.desc}
+                              </p>
+                            )}
+                          </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
@@ -124,7 +173,6 @@ export default function ShowcaseSection() {
             </div>
           </div>
 
-          {/* Navigation */}
           <button onClick={scrollPrev} className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center bg-white/90 dark:bg-gray-800/90 shadow-xl hover:scale-110 transition-transform">
             <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
           </button>
@@ -133,9 +181,8 @@ export default function ShowcaseSection() {
           </button>
         </div>
 
-        {/* Dots */}
         <div className="flex justify-center gap-2 mt-8">
-          {dict.showcase.items.map((_, index) => (
+          {items.map((_, index) => (
             <button
               key={index}
               onClick={() => emblaApi?.scrollTo(index)}
