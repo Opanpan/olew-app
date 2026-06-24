@@ -173,10 +173,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
           {d.back_to} {categoryName}
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14">
+        <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-8 lg:gap-12">
 
           {/* ══ LEFT: Gallery / 3D ══ */}
-          <div>
+          <div className="max-w-[420px] w-full mx-auto lg:mx-0">
             <AnimatePresence mode="wait">
               {!show3DPreview ? (
                 <motion.div

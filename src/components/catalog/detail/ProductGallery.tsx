@@ -61,12 +61,12 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                 key={index}
                 className="flex-[0_0_100%] min-w-0"
               >
-                <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
                   <ImgWithFallback
                     src={image}
                     alt={`${productName} - Image ${index + 1}`}
                     fallback={PRODUCT_PLACEHOLDER}
-                    className="w-full h-full object-contain p-8 md:p-12 lg:p-16"
+                    className="w-full h-full object-contain p-6 md:p-8"
                     loading={index === 0 ? 'eager' : 'lazy'}
                   />
                 </div>
