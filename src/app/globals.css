@@ -74,12 +74,58 @@
   pointer-events: all;
 }
 
+/* ── Global scrollbar ────────────────────────────────────────────────────── */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2b87f5 transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #47a3ff 0%, #2b87f5 50%, #1d6fd9 100%);
+  border-radius: 999px;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #7cc4ff 0%, #47a3ff 50%, #2b87f5 100%);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #1d6fd9 0%, #1557b8 50%, #0f4694 100%);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #2b87f5 0%, #1d6fd9 50%, #1557b8 100%);
+}
+
+.dark * {
+  scrollbar-color: #1557b8 transparent;
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
