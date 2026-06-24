@@ -108,6 +108,9 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [compatPreview, setCompatPreview] = useState<ProductDetail | null>(null);
   const [compatLoading, setCompatLoading] = useState(false);
 
+  // Selected compatible item for 3D overlay
+  const selectedCompatItem = compatibility?.compatible.find(c => c.id === selectedCompatId) ?? null;
+
   const handleCompatClick = async (id: string) => {
     if (selectedCompatId === id) {
       setSelectedCompatId(null);
@@ -125,6 +128,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // Color state for 3D viewer
   const [customColor, setCustomColor] = useState('#22c55e');
   const [isCustomColor, setIsCustomColor] = useState(true);
+  const [capColor, setCapColor] = useState('#555555');
+  const [isCustomCapColor, setIsCustomCapColor] = useState(false);
 
   const isBottle = product.type.name_en.toLowerCase() === 'bottle';
   const categoryPath = isBottle ? 'bottles' : 'caps';
@@ -218,11 +223,12 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                   <Product3DViewer
                     bottleModelUrl={product.three_d_file_path ?? '/images/3d/base.glb'}
                     bottleColor={customColor}
-                    capColor="#000000"
+                    capColor={capColor}
                     productCategory={isBottle ? 'bottle' : 'cap'}
                     bottleScale={1}
-                    capScale={1}
-                    capPositionY={0}
+                    capModelUrl={selectedCompatItem ? '/images/3d/cap.glb' : undefined}
+                    capScale={selectedCompatItem?.scale ?? 1}
+                    capPositionY={selectedCompatItem ? selectedCompatItem.position.z / 300 : 0}
                     productColorConfig={{
                       colors: [],
                       selectedColor: '',
@@ -233,6 +239,16 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       onIsCustomChange: setIsCustomColor,
                       label: d.product_color,
                     }}
+                    capColorConfig={selectedCompatItem ? {
+                      colors: [],
+                      selectedColor: '',
+                      onColorChange: () => undefined,
+                      customColor: capColor,
+                      onCustomColorChange: setCapColor,
+                      isCustom: isCustomCapColor,
+                      onIsCustomChange: setIsCustomCapColor,
+                      label: d.cap_color,
+                    } : undefined}
                   />
                 </motion.div>
               )}
@@ -249,7 +265,15 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                 {show3DPreview ? (
                   <><ImageIcon className="w-5 h-5" />{d.view_gallery}</>
                 ) : (
-                  <><Box className="w-5 h-5" />{d.view_3d_preview}</>
+                  <>
+                    <Box className="w-5 h-5" />
+                    {d.view_3d_preview}
+                    {selectedCompatItem && (
+                      <span className="ml-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-500 text-white">
+                        + {lang === 'id' ? selectedCompatItem.name_id : selectedCompatItem.name_en}
+                      </span>
+                    )}
+                  </>
                 )}
               </motion.button>
             )}
