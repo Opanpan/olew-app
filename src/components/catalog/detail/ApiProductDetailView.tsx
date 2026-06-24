@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
-  ChevronDown, MessageCircle, Tag, Heart, Share2, Link2, ArrowLeftRight, Check,
+  ChevronDown, MessageCircle, Tag, Heart, Share2, Link2, ArrowLeftRight, Check, X, ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ProductDetail, ProductListItem, ProductCompatibility } from '@/lib/publicApi';
+import { ProductDetail, ProductListItem, ProductCompatibility, getProductDetail } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
 import { useCompare } from '@/lib/CompareContext';
@@ -102,6 +102,25 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [show3DPreview, setShow3DPreview] = useState(false);
   const [openDescription, setOpenDescription] = useState(true);
   const [openAttributes, setOpenAttributes] = useState(true);
+
+  // Compatible product inline preview
+  const [selectedCompatId, setSelectedCompatId] = useState<string | null>(null);
+  const [compatPreview, setCompatPreview] = useState<ProductDetail | null>(null);
+  const [compatLoading, setCompatLoading] = useState(false);
+
+  const handleCompatClick = async (id: string) => {
+    if (selectedCompatId === id) {
+      setSelectedCompatId(null);
+      setCompatPreview(null);
+      return;
+    }
+    setSelectedCompatId(id);
+    setCompatLoading(true);
+    setCompatPreview(null);
+    const detail = await getProductDetail(id);
+    setCompatPreview(detail);
+    setCompatLoading(false);
+  };
 
   // Color state for 3D viewer
   const [customColor, setCustomColor] = useState('#22c55e');
@@ -387,27 +406,110 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
                 {/* Horizontal scroll list */}
                 <div className="p-4 overflow-x-auto scrollbar-hide">
-                  <div className="flex gap-3 min-w-0">
+                  <div className="flex gap-3">
                     {compatibility.compatible.map((item) => {
                       const name = lang === 'id' ? item.name_id : item.name_en;
+                      const isSelected = selectedCompatId === item.id;
                       return (
-                        <Link
+                        <button
                           key={item.id}
-                          href={`/${lang}/products/${item.id}`}
-                          className="flex-shrink-0 flex flex-col items-center gap-2 p-3 w-28 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200 group"
+                          onClick={() => handleCompatClick(item.id)}
+                          className={cn(
+                            'flex-shrink-0 flex flex-col items-center gap-2 p-3 w-28 rounded-xl border transition-all duration-200 group',
+                            isSelected
+                              ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-400 dark:border-primary-500'
+                              : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 dark:hover:bg-primary-900/10'
+                          )}
                         >
-                          {/* Icon placeholder — thumbnail not in compatibility response */}
-                          <div className="w-12 h-12 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center group-hover:border-primary-300 transition-colors">
-                            <Package className="w-6 h-6 text-gray-300 dark:text-gray-500 group-hover:text-primary-400 transition-colors" />
+                          <div className={cn(
+                            'w-12 h-12 rounded-lg border flex items-center justify-center transition-colors',
+                            isSelected
+                              ? 'bg-white dark:bg-gray-800 border-primary-300'
+                              : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 group-hover:border-primary-300'
+                          )}>
+                            <Package className={cn('w-6 h-6 transition-colors', isSelected ? 'text-primary-500' : 'text-gray-300 dark:text-gray-500 group-hover:text-primary-400')} />
                           </div>
-                          <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 text-center leading-tight line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                          <span className={cn('text-[10px] font-semibold text-center leading-tight line-clamp-2 transition-colors', isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 group-hover:text-primary-600')}>
                             {name}
                           </span>
-                        </Link>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Inline preview panel */}
+                <AnimatePresence>
+                  {selectedCompatId && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="overflow-hidden border-t border-gray-100 dark:border-gray-800"
+                    >
+                      <div className="p-4">
+                        {compatLoading ? (
+                          <div className="flex items-center gap-3 py-2">
+                            <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                            <div className="space-y-2 flex-1">
+                              <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-3/4" />
+                              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-1/2" />
+                            </div>
+                          </div>
+                        ) : compatPreview ? (
+                          <div className="flex items-center gap-4">
+                            {/* Thumbnail */}
+                            <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 flex-shrink-0 border border-gray-200 dark:border-gray-700">
+                              <ImgWithFallback
+                                src={compatPreview.images.find(i => i.is_thumbnail)?.file_path ?? compatPreview.images[0]?.file_path}
+                                alt={lang === 'id' ? compatPreview.name_id : compatPreview.name_en}
+                                fallback={PRODUCT_PLACEHOLDER}
+                                className="w-full h-full object-contain p-2"
+                              />
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                                {lang === 'id' ? compatPreview.type.name_id : compatPreview.type.name_en}
+                                {' · '}
+                                {lang === 'id' ? compatPreview.category.name_id : compatPreview.category.name_en}
+                              </p>
+                              <p className="font-semibold text-sm text-gray-900 dark:text-white line-clamp-2 mb-2">
+                                {lang === 'id' ? compatPreview.name_id : compatPreview.name_en}
+                              </p>
+                              {compatPreview.attributes.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {compatPreview.attributes.slice(0, 3).map(a => (
+                                    <span key={a.id} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium">
+                                      {a.value}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <Link
+                                href={`/${lang}/products/${compatPreview.id}`}
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                {dict.catalog.product_card.view_details}
+                              </Link>
+                            </div>
+
+                            {/* Close */}
+                            <button
+                              onClick={() => { setSelectedCompatId(null); setCompatPreview(null); }}
+                              className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0 self-start"
+                            >
+                              <X className="w-3.5 h-3.5 text-gray-500" />
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
