@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
-  ChevronDown, MessageCircle, ShoppingBag, Tag,
+  ChevronDown, MessageCircle, ShoppingBag, Tag, Heart, Share2, Link2,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ProductDetail, ProductListItem } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
+import { useLike, useShare } from '@/hooks/useProductActions';
 import ProductGallery from './ProductGallery';
 import Breadcrumb from '../Breadcrumb';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
@@ -107,6 +108,11 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
   const categoryPath = isBottle ? 'bottles' : 'caps';
   const categoryName = lang === 'id' ? product.type.name_id : product.type.name_en;
   const productName = lang === 'id' ? product.name_id : product.name_en;
+  const pc = dict.catalog.product_card;
+
+  // Like & share — must be after productName is defined
+  const { liked, toggle: toggleLike } = useLike(product.id);
+  const { share, copied } = useShare(productName);
 
   const description = product.description
     ? (lang === 'id' ? product.description.long_id : product.description.long_en)
@@ -226,10 +232,53 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
                 </span>
               </div>
 
-              {/* Title */}
-              <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-3">
-                {productName}
-              </h1>
+              {/* Title + like/share row */}
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight">
+                  {productName}
+                </h1>
+
+                {/* Like & Share */}
+                <div className="flex items-center gap-2 flex-shrink-0 pt-1">
+                  {/* Like */}
+                  <motion.button
+                    onClick={toggleLike}
+                    whileTap={{ scale: 0.85 }}
+                    aria-label={liked ? pc.liked : pc.like}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-300',
+                      liked
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-500'
+                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-red-300 hover:text-red-500'
+                    )}
+                  >
+                    <Heart className={cn('w-4 h-4 transition-all', liked && 'fill-red-500')} />
+                    <span className="hidden sm:inline">{liked ? pc.liked : pc.like}</span>
+                  </motion.button>
+
+                  {/* Share */}
+                  <motion.button
+                    onClick={share}
+                    whileTap={{ scale: 0.85 }}
+                    aria-label={pc.share}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold border-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-600 transition-all duration-300"
+                  >
+                    <AnimatePresence mode="wait">
+                      {copied ? (
+                        <motion.span key="copied" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 text-primary-600">
+                          <Link2 className="w-4 h-4" />
+                          <span className="hidden sm:inline">{pc.share_copied}</span>
+                        </motion.span>
+                      ) : (
+                        <motion.span key="share" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
+                          <Share2 className="w-4 h-4" />
+                          <span className="hidden sm:inline">{pc.share}</span>
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                </div>
+              </div>
             </div>
 
             {/* ── Specification / Attributes table card ── */}

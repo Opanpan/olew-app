@@ -118,6 +118,10 @@ export const dictionaries = {
         featured: 'Featured',
         best_seller: 'Best Seller',
         new_arrival: 'New',
+        like: 'Like',
+        liked: 'Liked',
+        share: 'Share',
+        share_copied: 'Link copied!',
         colors: 'Colors',
       },
       product_detail: {
@@ -413,6 +417,10 @@ export const dictionaries = {
         featured: 'Unggulan',
         best_seller: 'Terlaris',
         new_arrival: 'Baru',
+        like: 'Suka',
+        liked: 'Disukai',
+        share: 'Bagikan',
+        share_copied: 'Link disalin!',
         colors: 'Warna',
       },
       product_detail: {

@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeftRight, Check } from 'lucide-react';
+import { ArrowLeftRight, Check, Heart, Share2, Link2 } from 'lucide-react';
 import { ProductListItem } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import { useCompare } from '@/lib/CompareContext';
 import type { CompareItem } from '@/lib/CompareContext';
+import { useLike, useShare } from '@/hooks/useProductActions';
 import { cn } from '@/lib/utils';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
 
@@ -25,6 +26,10 @@ export default function ApiProductCard({ product, lang, index = 0 }: ApiProductC
   const name = lang === 'id' ? product.name_id : product.name_en;
   const detailUrl = `/${lang}/products/${product.id}`;
   const isComparing = has(product.id);
+
+  const { liked, toggle: toggleLike } = useLike(product.id);
+  const { share, copied } = useShare(name);
+  const c = dict.catalog.product_card;
 
   const handleCompareToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -59,6 +64,48 @@ export default function ApiProductCard({ product, lang, index = 0 }: ApiProductC
           className="absolute inset-0 w-full h-full group-hover:scale-110 transition-transform duration-700"
           loading="lazy"
         />
+
+        {/* Like + Share overlay buttons */}
+        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Like */}
+          <motion.button
+            onClick={(e) => { e.preventDefault(); toggleLike(); }}
+            whileTap={{ scale: 0.85 }}
+            aria-label={liked ? c.liked : c.like}
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-md"
+          >
+            <Heart
+              className={cn('w-4 h-4 transition-colors', liked ? 'fill-red-500 text-red-500' : 'text-gray-500 dark:text-gray-400')}
+            />
+          </motion.button>
+
+          {/* Share */}
+          <motion.button
+            onClick={(e) => { e.preventDefault(); share(); }}
+            whileTap={{ scale: 0.85 }}
+            aria-label={c.share}
+            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-md"
+          >
+            {copied
+              ? <Link2 className="w-4 h-4 text-primary-500" />
+              : <Share2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            }
+          </motion.button>
+        </div>
+
+        {/* Copied toast */}
+        <AnimatePresence>
+          {copied && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-gray-900/80 text-white text-xs font-medium whitespace-nowrap backdrop-blur-sm"
+            >
+              {c.share_copied}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Product Info */}
@@ -104,7 +151,7 @@ export default function ApiProductCard({ product, lang, index = 0 }: ApiProductC
             href={detailUrl}
             className="btn-primary w-full text-xs md:text-sm px-4 md:px-6 py-3 md:py-3.5 min-h-[44px] flex items-center justify-center"
           >
-            {dict.catalog.product_card.view_details}
+            {c.view_details}
           </Link>
         </div>
       </div>
