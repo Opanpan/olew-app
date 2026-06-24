@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
-  ChevronDown, MessageCircle, Tag, Heart, Share2, Link2,
+  ChevronDown, MessageCircle, Tag, Heart, Share2, Link2, ArrowLeftRight, Check,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ProductDetail, ProductListItem } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
+import { useCompare } from '@/lib/CompareContext';
+import type { CompareItem } from '@/lib/CompareContext';
 import ProductGallery from './ProductGallery';
 import Breadcrumb from '../Breadcrumb';
 import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
@@ -110,9 +112,26 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
   const productName = lang === 'id' ? product.name_id : product.name_en;
   const pc = dict.catalog.product_card;
 
-  // Like & share — must be after productName is defined
+  // Like, share & compare — must be after productName is defined
   const { liked, toggle: toggleLike } = useLike(product.id);
   const { share, copied } = useShare(productName);
+  const { toggle: toggleCompare, has: hasCompare, canAdd } = useCompare();
+  const isComparing = hasCompare(product.id);
+  const [showMaxMsg, setShowMaxMsg] = useState(false);
+
+  const handleCompare = () => {
+    const item: CompareItem = {
+      id: product.id,
+      name_en: product.name_en,
+      name_id: product.name_id,
+      thumbnail: product.images.find(i => i.is_thumbnail)?.file_path ?? product.images[0]?.file_path,
+    };
+    const ok = toggleCompare(item);
+    if (!ok) {
+      setShowMaxMsg(true);
+      setTimeout(() => setShowMaxMsg(false), 2500);
+    }
+  };
 
   const description = product.description
     ? (lang === 'id' ? product.description.long_id : product.description.long_en)
@@ -431,6 +450,39 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
                   </div>
                 )}
               </div>
+
+              {/* Compare button */}
+              <AnimatePresence mode="wait">
+                {showMaxMsg ? (
+                  <motion.div
+                    key="max"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full py-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-center text-sm font-medium text-amber-700 dark:text-amber-300"
+                  >
+                    {dict.catalog.compare.max_reached}
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="compare"
+                    onClick={handleCompare}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={cn(
+                      'w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold border-2 transition-all duration-300',
+                      isComparing
+                        ? 'bg-primary-500 text-white border-primary-500 shadow-md shadow-primary-500/25'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400'
+                    )}
+                  >
+                    {isComparing
+                      ? <><Check className="w-4 h-4" />{dict.catalog.compare.added}</>
+                      : <><ArrowLeftRight className="w-4 h-4" />{dict.catalog.compare.toggle}</>
+                    }
+                  </motion.button>
+                )}
+              </AnimatePresence>
 
               {/* Inquiry button */}
               <motion.a
