@@ -1,4 +1,17 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+function devLog(url: string, status: number, payload: unknown, response: unknown) {
+  if (!IS_DEV) return;
+  const ok = status >= 200 && status < 300;
+  console.log(
+    `\n\x1b[36m[API]\x1b[0m ${ok ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m'} GET ${url} \x1b[90m(${status})\x1b[0m`
+  );
+  if (payload !== null) console.log('  \x1b[33mpayload\x1b[0m:', payload);
+  console.log('  \x1b[33mresponse\x1b[0m:', JSON.stringify(response, null, 2));
+}
+
+// ── CMS Types ─────────────────────────────────────────────────────────────────
 
 export interface Client {
   id: string;
@@ -39,14 +52,19 @@ export interface GalleryItem {
   sort_order: number;
 }
 
+// ── CMS Fetchers ──────────────────────────────────────────────────────────────
+
 async function fetchPublic<T>(path: string): Promise<T[]> {
+  const url = `${BASE_URL}${path}`;
   try {
-    const res = await fetch(`${BASE_URL}${path}`, { next: { revalidate: 60 } });
-    if (!res.ok) return [];
+    const res = await fetch(url, { next: { revalidate: 60 } });
     const json = await res.json();
+    devLog(url, res.status, null, json);
+    if (!res.ok) return [];
     const data = json?.data;
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
     return [];
   }
 }
@@ -155,61 +173,69 @@ export async function getProducts(query: {
   type_id?: string;
   category_id?: string;
 }): Promise<ProductsListResponse> {
-  try {
-    const params = new URLSearchParams();
-    if (query.limit !== undefined) params.set('limit', String(query.limit));
-    if (query.offset !== undefined) params.set('offset', String(query.offset));
-    if (query.search) params.set('search', query.search);
-    if (query.type_id) params.set('type_id', query.type_id);
-    if (query.category_id) params.set('category_id', query.category_id);
+  const params = new URLSearchParams();
+  if (query.limit !== undefined) params.set('limit', String(query.limit));
+  if (query.offset !== undefined) params.set('offset', String(query.offset));
+  if (query.search) params.set('search', query.search);
+  if (query.type_id) params.set('type_id', query.type_id);
+  if (query.category_id) params.set('category_id', query.category_id);
 
-    const qs = params.toString();
-    const url = `${BASE_URL}/api/v1/public/products${qs ? `?${qs}` : ''}`;
+  const qs = params.toString();
+  const url = `${BASE_URL}/api/v1/public/products${qs ? `?${qs}` : ''}`;
+
+  try {
     const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return { data: [], meta: { limit: 12, offset: 0, total: 0 } };
     const json = await res.json();
-    // Response envelope: { data: { data: [], meta: {} } }
+    devLog(url, res.status, Object.fromEntries(params), json);
+    if (!res.ok) return { data: [], meta: { limit: 12, offset: 0, total: 0 } };
     const inner = json?.data;
     const raw: ProductListItem[] = Array.isArray(inner?.data) ? inner.data : [];
     const seen = new Set<string>();
-    const data = raw.filter((p) => seen.has(p.id) ? false : (seen.add(p.id), true));
+    const data = raw.filter(p => seen.has(p.id) ? false : (seen.add(p.id), true));
     const meta: ProductMeta = inner?.meta ?? { limit: 12, offset: 0, total: 0 };
     return { data, meta };
-  } catch {
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
     return { data: [], meta: { limit: 12, offset: 0, total: 0 } };
   }
 }
 
 export async function getProductDetail(id: string): Promise<ProductDetail | null> {
+  const url = `${BASE_URL}/api/v1/public/products/${id}`;
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/public/products/${id}`, { cache: 'no-store' });
-    if (!res.ok) return null;
+    const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
-    // Response envelope: { data: ProductDetail }
+    devLog(url, res.status, { id }, json);
+    if (!res.ok) return null;
     return (json?.data as ProductDetail) ?? null;
-  } catch {
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
     return null;
   }
 }
 
 export async function getRelatedProducts(id: string): Promise<ProductListItem[]> {
+  const url = `${BASE_URL}/api/v1/public/products/${id}/related`;
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/public/products/${id}/related`, { cache: 'no-store' });
-    if (!res.ok) return [];
+    const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
-    // Response envelope: { data: ProductListItem[] }
+    devLog(url, res.status, { id }, json);
+    if (!res.ok) return [];
     const data = json?.data;
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
     return [];
   }
 }
 
 export async function getProductFiltersData(): Promise<ProductFiltersData | null> {
+  const url = `${BASE_URL}/api/v1/public/products/filters`;
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/public/products/filters`, { next: { revalidate: 300 } });
-    if (!res.ok) return null;
+    const res = await fetch(url, { next: { revalidate: 300 } });
     const json = await res.json();
+    devLog(url, res.status, null, json);
+    if (!res.ok) return null;
     const data = json?.data;
     if (!data) return null;
     return {
@@ -217,7 +243,8 @@ export async function getProductFiltersData(): Promise<ProductFiltersData | null
       categories: Array.isArray(data.categories) ? data.categories : [],
       attributes: (data.attributes && typeof data.attributes === 'object') ? data.attributes : {},
     };
-  } catch {
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
     return null;
   }
 }
