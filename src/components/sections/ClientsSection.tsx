@@ -6,6 +6,7 @@ import { Users } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
 import { getClients, type Client } from '@/lib/publicApi';
+import ImgWithFallback from '@/components/shared/ImgWithFallback';
 
 const fallbackClients = [
   'Brand Alpha', 'Luxe Beauty', 'Pure Essence', 'Natural Care', 'Glow Labs', 'Skin Radiance',
@@ -18,7 +19,7 @@ function ClientLogo({ name, logo_url }: { name: string; logo_url?: string }) {
   return (
     <div className="flex-shrink-0 mx-4 md:mx-6 w-28 h-16 md:w-36 md:h-20 flex items-center justify-center bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:scale-105 transition-all">
       {logo_url ? (
-        <img
+        <ImgWithFallback
           src={logo_url}
           alt={name}
           className="w-full h-full object-contain p-3"

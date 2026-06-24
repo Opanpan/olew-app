@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
 import { getBannerCarousels, type BannerCarousel } from '@/lib/publicApi';
+import ImgWithFallback from '@/components/shared/ImgWithFallback';
 
 const fallbackSlides = [
   { id: 1, titleKey: 'slide1_title', descKey: 'slide1_desc', gradient: 'from-blue-600 via-sky-500 to-cyan-500' },
@@ -150,13 +151,11 @@ export default function HeroSection() {
                     ? banners.map((banner, index) => (
                         <div key={banner.id} className="flex-[0_0_100%] min-w-0">
                           <div className={cn('relative aspect-square md:aspect-[4/3] rounded-3xl overflow-hidden bg-gradient-to-br', gradients[index % gradients.length])}>
-                            {banner.image_path && (
-                              <img
-                                src={banner.image_path}
-                                alt={banner.title}
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                            )}
+                            <ImgWithFallback
+                              src={banner.image_path}
+                              alt={banner.title}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
                             <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">

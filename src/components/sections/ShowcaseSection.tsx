@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import { getGallery, type GalleryItem } from '@/lib/publicApi';
+import ImgWithFallback from '@/components/shared/ImgWithFallback';
 
 const gradients = [
   'from-rose-500 via-pink-500 to-fuchsia-600',
@@ -106,7 +107,7 @@ export default function ShowcaseSection() {
                   >
                     {item.image_url ? (
                       <>
-                        <img
+                        <ImgWithFallback
                           src={item.image_url}
                           alt={item.title}
                           className="absolute inset-0 w-full h-full object-cover"
