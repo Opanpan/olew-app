@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
-  ChevronDown, MessageCircle, ShoppingBag, Tag, Heart, Share2, Link2,
+  ChevronDown, MessageCircle, Tag, Heart, Share2, Link2,
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -354,33 +354,83 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
 
             {/* ── Action area ── */}
             <div className="space-y-3">
-              {/* Shopee / Tokopedia links */}
-              {product.shopee_url && (
-                <motion.a
-                  href={product.shopee_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="btn-outline w-full flex items-center justify-center gap-2 py-4 text-sm font-semibold"
-                >
-                  <ShoppingBag className="w-5 h-5" />
-                  Buy on Shopee
-                </motion.a>
-              )}
-              {product.tokopedia_url && (
-                <motion.a
-                  href={product.tokopedia_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="btn-outline w-full flex items-center justify-center gap-2 py-4 text-sm font-semibold"
-                >
-                  <ShoppingBag className="w-5 h-5" />
-                  Buy on Tokopedia
-                </motion.a>
-              )}
+              {/* Marketplace buttons — always visible, disabled when URL not yet available */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Shopee */}
+                {product.shopee_url ? (
+                  <motion.a
+                    href={product.shopee_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="relative flex items-center gap-2.5 px-4 py-3.5 rounded-2xl border-2 border-[#EE4D2D]/40 bg-[#EE4D2D]/5 hover:bg-[#EE4D2D]/10 hover:border-[#EE4D2D] transition-all duration-200 group"
+                  >
+                    {/* Shopee icon */}
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0" fill="none">
+                      <rect width="24" height="24" rx="6" fill="#EE4D2D"/>
+                      <path d="M12 4C9.8 4 8 5.8 8 8H6.5C5.7 8 5 8.6 5 9.5L5.8 18.5C5.9 19.3 6.6 20 7.4 20H16.6C17.4 20 18.1 19.3 18.2 18.5L19 9.5C19 8.6 18.3 8 17.5 8H16C16 5.8 14.2 4 12 4ZM12 5.5C13.4 5.5 14.5 6.6 14.5 8H9.5C9.5 6.6 10.6 5.5 12 5.5ZM12 12C10.9 12 10 12.9 10 14C10 15.1 10.9 16 12 16C13.1 16 14 15.1 14 14C14 12.9 13.1 12 12 12Z" fill="white"/>
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-[#EE4D2D]/70 font-medium leading-none mb-0.5">Beli di</p>
+                      <p className="text-sm font-bold text-[#EE4D2D] leading-none">Shopee</p>
+                    </div>
+                    <svg className="w-3.5 h-3.5 ml-auto text-[#EE4D2D]/50 group-hover:text-[#EE4D2D] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                  </motion.a>
+                ) : (
+                  <div className="relative flex items-center gap-2.5 px-4 py-3.5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-60 cursor-not-allowed">
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0 grayscale" fill="none">
+                      <rect width="24" height="24" rx="6" fill="#EE4D2D"/>
+                      <path d="M12 4C9.8 4 8 5.8 8 8H6.5C5.7 8 5 8.6 5 9.5L5.8 18.5C5.9 19.3 6.6 20 7.4 20H16.6C17.4 20 18.1 19.3 18.2 18.5L19 9.5C19 8.6 18.3 8 17.5 8H16C16 5.8 14.2 4 12 4ZM12 5.5C13.4 5.5 14.5 6.6 14.5 8H9.5C9.5 6.6 10.6 5.5 12 5.5ZM12 12C10.9 12 10 12.9 10 14C10 15.1 10.9 16 12 16C13.1 16 14 15.1 14 14C14 12.9 13.1 12 12 12Z" fill="white"/>
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Beli di</p>
+                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400 leading-none">Shopee</p>
+                    </div>
+                    <span className="ml-auto text-[9px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">Segera</span>
+                  </div>
+                )}
+
+                {/* Tokopedia */}
+                {product.tokopedia_url ? (
+                  <motion.a
+                    href={product.tokopedia_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="relative flex items-center gap-2.5 px-4 py-3.5 rounded-2xl border-2 border-[#00AA5B]/40 bg-[#00AA5B]/5 hover:bg-[#00AA5B]/10 hover:border-[#00AA5B] transition-all duration-200 group"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0" fill="none">
+                      <rect width="24" height="24" rx="6" fill="#00AA5B"/>
+                      <path d="M12 3L5 7V12C5 15.55 8.08 18.9 12 20C15.92 18.9 19 15.55 19 12V7L12 3Z" fill="white" opacity="0.9"/>
+                      <path d="M10 11.5L11.5 13L14.5 10" stroke="#00AA5B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-[#00AA5B]/70 font-medium leading-none mb-0.5">Beli di</p>
+                      <p className="text-sm font-bold text-[#00AA5B] leading-none">Tokopedia</p>
+                    </div>
+                    <svg className="w-3.5 h-3.5 ml-auto text-[#00AA5B]/50 group-hover:text-[#00AA5B] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                  </motion.a>
+                ) : (
+                  <div className="relative flex items-center gap-2.5 px-4 py-3.5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-60 cursor-not-allowed">
+                    <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0 grayscale" fill="none">
+                      <rect width="24" height="24" rx="6" fill="#00AA5B"/>
+                      <path d="M12 3L5 7V12C5 15.55 8.08 18.9 12 20C15.92 18.9 19 15.55 19 12V7L12 3Z" fill="white" opacity="0.9"/>
+                      <path d="M10 11.5L11.5 13L14.5 10" stroke="#00AA5B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Beli di</p>
+                      <p className="text-sm font-bold text-gray-500 dark:text-gray-400 leading-none">Tokopedia</p>
+                    </div>
+                    <span className="ml-auto text-[9px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">Segera</span>
+                  </div>
+                )}
+              </div>
 
               {/* Inquiry button */}
               <motion.a

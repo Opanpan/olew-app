@@ -39,8 +39,8 @@ export default async function CapsPage({ params, searchParams }: CapsPageProps) 
           { label: dict.nav.caps },
         ]}
       />
-      <main className="section-padding">
-        <div className="container-custom mx-auto">
+      <main className="py-8 md:py-10 px-4 md:px-8">
+        <div className="mx-auto max-w-[1440px]">
           <Suspense>
             <CatalogClient
               products={result.data}
