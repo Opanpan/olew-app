@@ -13,7 +13,7 @@ import { useLang } from '@/lib/LangContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
 import ProductGallery from './ProductGallery';
 import Breadcrumb from '../Breadcrumb';
-import ImgWithFallback from '@/components/shared/ImgWithFallback';
+import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
 import ApiProductCard from '../ApiProductCard';
 import { cn } from '@/lib/utils';
 
