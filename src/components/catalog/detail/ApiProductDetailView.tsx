@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Box, Image as ImageIcon, Package, ArrowLeft,
+  Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
   ChevronDown, MessageCircle, ShoppingBag, Tag,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ import { ProductDetail, ProductListItem } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import ProductGallery from './ProductGallery';
 import Breadcrumb from '../Breadcrumb';
+import ImgWithFallback from '@/components/shared/ImgWithFallback';
 import ApiProductCard from '../ApiProductCard';
 import { cn } from '@/lib/utils';
 
@@ -98,6 +99,10 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
   const [openDescription, setOpenDescription] = useState(true);
   const [openAttributes, setOpenAttributes] = useState(true);
 
+  // Color state for 3D viewer
+  const [customColor, setCustomColor] = useState('#22c55e');
+  const [isCustomColor, setIsCustomColor] = useState(true);
+
   const isBottle = product.type.name_en.toLowerCase() === 'bottle';
   const categoryPath = isBottle ? 'bottles' : 'caps';
   const categoryName = lang === 'id' ? product.type.name_id : product.type.name_en;
@@ -155,13 +160,7 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {imageUrls.length > 0 ? (
-                    <ProductGallery images={imageUrls} productName={productName} />
-                  ) : (
-                    <div className="aspect-square rounded-2xl md:rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
-                      <Package className="w-24 h-24 text-gray-300 dark:text-gray-700" />
-                    </div>
-                  )}
+                  <ProductGallery images={imageUrls.length > 0 ? imageUrls : ['']} productName={productName} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -173,7 +172,7 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
                 >
                   <Product3DViewer
                     bottleModelUrl={product.three_d_file_path ?? '/images/3d/base.glb'}
-                    bottleColor="#22c55e"
+                    bottleColor={customColor}
                     capColor="#000000"
                     productCategory={isBottle ? 'bottle' : 'cap'}
                     bottleScale={1}
@@ -183,10 +182,10 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
                       colors: [],
                       selectedColor: '',
                       onColorChange: () => undefined,
-                      customColor: '#22c55e',
-                      onCustomColorChange: () => undefined,
-                      isCustom: false,
-                      onIsCustomChange: () => undefined,
+                      customColor,
+                      onCustomColorChange: setCustomColor,
+                      isCustom: isCustomColor,
+                      onIsCustomChange: setIsCustomColor,
                       label: d.product_color,
                     }}
                   />
@@ -353,19 +352,51 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
       {relatedProducts.length > 0 && (
         <section className="container-custom mx-auto px-4 pb-16 md:pb-20">
           <div className="border-t border-gray-200 dark:border-gray-800 pt-12 md:pt-16">
-            <div className="mb-6 md:mb-8">
-              <h2 className="font-display text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {d.related_products}
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">
-                {d.related_desc}
-              </p>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 mb-8 md:mb-10">
+              <div>
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="font-display text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2"
+                >
+                  {d.related_products}
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 }}
+                  className="text-sm md:text-base text-gray-600 dark:text-gray-400"
+                >
+                  {d.related_desc}
+                </motion.p>
+              </div>
+              <Link
+                href={`/${lang}/${isBottle ? 'bottles' : 'caps'}`}
+                className="hidden md:flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:gap-3 transition-all font-medium group flex-shrink-0 mt-1"
+              >
+                {d.view_all}
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.slice(0, 4).map((item, index) => (
+
+            {/* Grid — up to 6 items, responsive */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+              {relatedProducts.map((item, index) => (
                 <ApiProductCard key={item.id} product={item} lang={lang} index={index} />
               ))}
             </div>
+
+            {/* Mobile view-all button */}
+            <Link
+              href={`/${lang}/${isBottle ? 'bottles' : 'caps'}`}
+              className="md:hidden mt-8 btn-outline w-full flex items-center justify-center gap-2 py-4 min-h-[48px]"
+            >
+              {d.view_all_products}
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           </div>
         </section>
       )}

@@ -170,7 +170,9 @@ export async function getProducts(query: {
     const json = await res.json();
     // Response envelope: { data: { data: [], meta: {} } }
     const inner = json?.data;
-    const data: ProductListItem[] = Array.isArray(inner?.data) ? inner.data : [];
+    const raw: ProductListItem[] = Array.isArray(inner?.data) ? inner.data : [];
+    const seen = new Set<string>();
+    const data = raw.filter((p) => seen.has(p.id) ? false : (seen.add(p.id), true));
     const meta: ProductMeta = inner?.meta ?? { limit: 12, offset: 0, total: 0 };
     return { data, meta };
   } catch {

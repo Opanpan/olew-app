@@ -5,6 +5,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import ImgWithFallback from '@/components/shared/ImgWithFallback';
 
 interface ProductGalleryProps {
   images: string[];
@@ -61,14 +62,11 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                 className="flex-[0_0_100%] min-w-0"
               >
                 <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                  <img
+                  <ImgWithFallback
                     src={image}
                     alt={`${productName} - Image ${index + 1}`}
                     className="w-full h-full object-contain p-8 md:p-12 lg:p-16"
                     loading={index === 0 ? 'eager' : 'lazy'}
-                    onError={(e) => {
-                      e.currentTarget.src = '/images/banners/broken-image.png';
-                    }}
                   />
                 </div>
               </div>
@@ -126,14 +124,11 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                     : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'
                 )}
               >
-                <img
+                <ImgWithFallback
                   src={image}
                   alt={`${productName} thumbnail ${index + 1}`}
                   className="w-full h-full object-contain p-2 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900"
                   loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.src = '/images/banners/broken-image.png';
-                  }}
                 />
               </button>
             ))}
@@ -159,14 +154,11 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               <ChevronRight className="w-6 h-6 text-white rotate-45" />
             </button>
             <div className="absolute inset-0 flex items-center justify-center p-4">
-              <img
+              <ImgWithFallback
                 src={images[selectedIndex]}
                 alt={`${productName} - Fullscreen`}
                 className="max-w-full max-h-full object-contain"
                 onClick={(e) => e.stopPropagation()}
-                onError={(e) => {
-                  e.currentTarget.src = '/images/banners/broken-image.png';
-                }}
               />
             </div>
           </motion.div>
