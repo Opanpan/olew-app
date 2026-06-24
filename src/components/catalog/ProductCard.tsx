@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Droplet, Package, Award, Sparkles, ArrowLeftRight, Check } from 'lucide-react';
 import { Product } from '@/types/catalog';
 import { useLang } from '@/lib/LangContext';
-import { useCompare } from '@/lib/CompareContext';
+import { useCompare, type CompareItem } from '@/lib/CompareContext';
 import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
@@ -22,7 +22,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 
   const handleCompareToggle = (e: React.MouseEvent) => {
     e.preventDefault();
-    const ok = toggle(product);
+    const item: CompareItem = { id: product.id, name_en: product.name, name_id: product.name, thumbnail: product.image };
+    const ok = toggle(item);
     if (!ok) {
       setShowMaxMsg(true);
       setTimeout(() => setShowMaxMsg(false), 2000);

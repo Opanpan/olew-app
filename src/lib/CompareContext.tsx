@@ -1,14 +1,24 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Product } from '@/types/catalog';
-
 const MAX_COMPARE = 4;
 const STORAGE_KEY = 'olew_compare_list';
 
+// Minimal shape stored in compare — compatible with ProductListItem and old Product type
+export interface CompareItem {
+  id: string;
+  name_en: string;
+  name_id: string;
+  thumbnail?: string;
+  slug_en?: string;
+  slug_id?: string;
+  min_price?: number;
+  three_d_file_path?: string;
+}
+
 interface CompareCtx {
-  list: Product[];
-  toggle: (p: Product) => boolean; // returns false if max reached
+  list: CompareItem[];
+  toggle: (p: CompareItem) => boolean;
   remove: (id: string) => void;
   clear: () => void;
   has: (id: string) => boolean;
@@ -19,33 +29,25 @@ interface CompareCtx {
 
 const Ctx = createContext<CompareCtx | null>(null);
 
-function readStorage(): Product[] {
+function readStorage(): CompareItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Product[]) : [];
+    return raw ? (JSON.parse(raw) as CompareItem[]) : [];
   } catch {
     return [];
   }
 }
 
 export function CompareProvider({ children }: { children: React.ReactNode }) {
-  const [list, setList] = useState<Product[]>([]);
+  const [list, setList] = useState<CompareItem[]>([]);
 
-  // Hydrate from localStorage after mount
-  useEffect(() => {
-    setList(readStorage());
-  }, []);
+  useEffect(() => { setList(readStorage()); }, []);
 
-  // Sync to localStorage on every change
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    } catch {
-      // storage quota exceeded or unavailable — silently ignore
-    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch { }
   }, [list]);
 
-  const toggle = (p: Product): boolean => {
+  const toggle = (p: CompareItem): boolean => {
     if (list.find(x => x.id === p.id)) {
       setList(prev => prev.filter(x => x.id !== p.id));
       return true;

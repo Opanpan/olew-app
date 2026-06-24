@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeftRight, Check } from 'lucide-react';
 import { Product } from '@/types/catalog';
 import { useCompare } from '@/lib/CompareContext';
+import type { CompareItem } from '@/lib/CompareContext';
 import { useLang } from '@/lib/LangContext';
 
 interface OrderFormProps {
@@ -19,7 +20,8 @@ export default function OrderForm({ product }: OrderFormProps) {
   const isComparing = has(product.id);
 
   const handleToggle = () => {
-    const ok = toggle(product);
+    const item: CompareItem = { id: product.id, name_en: product.name, name_id: product.name, thumbnail: product.image };
+    const ok = toggle(item);
     if (!ok) {
       setShowMaxMsg(true);
       setTimeout(() => setShowMaxMsg(false), 2500);
