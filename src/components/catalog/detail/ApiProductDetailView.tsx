@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ProductDetail, ProductListItem } from '@/lib/publicApi';
+import { ProductDetail, ProductListItem, ProductCompatibility } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
 import { useCompare } from '@/lib/CompareContext';
@@ -92,9 +92,10 @@ function AccordionSection({ title, isOpen, onToggle, children, isFirst = false, 
 interface ApiProductDetailViewProps {
   product: ProductDetail;
   relatedProducts: ProductListItem[];
+  compatibility?: ProductCompatibility | null;
 }
 
-export default function ApiProductDetailView({ product, relatedProducts }: ApiProductDetailViewProps) {
+export default function ApiProductDetailView({ product, relatedProducts, compatibility }: ApiProductDetailViewProps) {
   const { lang, dict } = useLang();
   const d = dict.catalog.product_detail;
 
@@ -368,6 +369,45 @@ export default function ApiProductDetailView({ product, relatedProducts }: ApiPr
                     </p>
                   </div>
                 </AccordionSection>
+              </div>
+            )}
+
+            {/* ── Compatible Products ── */}
+            {compatibility && compatibility.compatible.length > 0 && (
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                {/* Header */}
+                <div className="px-5 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                    {lang === 'id' ? 'Produk Kompatibel' : 'Compatible Products'}
+                  </span>
+                  <span className="text-[10px] font-semibold text-primary-500 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
+                    {compatibility.compatible.length}
+                  </span>
+                </div>
+
+                {/* Horizontal scroll list */}
+                <div className="p-4 overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-3 min-w-0">
+                    {compatibility.compatible.map((item) => {
+                      const name = lang === 'id' ? item.name_id : item.name_en;
+                      return (
+                        <Link
+                          key={item.id}
+                          href={`/${lang}/products/${item.id}`}
+                          className="flex-shrink-0 flex flex-col items-center gap-2 p-3 w-28 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200 group"
+                        >
+                          {/* Icon placeholder — thumbnail not in compatibility response */}
+                          <div className="w-12 h-12 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center group-hover:border-primary-300 transition-colors">
+                            <Package className="w-6 h-6 text-gray-300 dark:text-gray-500 group-hover:text-primary-400 transition-colors" />
+                          </div>
+                          <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 text-center leading-tight line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                            {name}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 

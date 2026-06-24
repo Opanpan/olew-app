@@ -158,6 +158,24 @@ export interface ProductDetail {
   tokopedia_url?: string;
 }
 
+export interface CompatibleProduct {
+  id: string;
+  name_en: string;
+  name_id: string;
+  three_d_file_path?: string;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  scale: number;
+}
+
+export interface ProductCompatibility {
+  product_id: string;
+  name_en: string;
+  name_id: string;
+  three_d_file_path?: string;
+  compatible: CompatibleProduct[];
+}
+
 export interface ProductFiltersData {
   types: ProductTypeBasic[];
   categories: ProductCategoryBasic[];
@@ -226,6 +244,21 @@ export async function getRelatedProducts(id: string): Promise<ProductListItem[]>
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
     return [];
+  }
+}
+
+export async function getProductCompatibilities(id: string): Promise<ProductCompatibility | null> {
+  const url = `${BASE_URL}/api/v1/public/products/${id}/compatibilities`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    devLog(url, res.status, { id }, json);
+    if (!res.ok) return null;
+    // Envelope: { data: { data: { product_id, compatible: [] } } }
+    return (json?.data?.data as ProductCompatibility) ?? null;
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    return null;
   }
 }
 

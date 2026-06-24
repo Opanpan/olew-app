@@ -1,23 +1,19 @@
 import { notFound } from 'next/navigation';
-import { getProductDetail, getRelatedProducts } from '@/lib/publicApi';
+import { getProductDetail, getRelatedProducts, getProductCompatibilities } from '@/lib/publicApi';
 import ApiProductDetailView from '@/components/catalog/detail/ApiProductDetailView';
 
 interface CapDetailPageProps {
-  params: {
-    lang: string;
-    id: string;
-  };
+  params: { lang: string; id: string };
 }
 
 export default async function CapDetailPage({ params }: CapDetailPageProps) {
-  const [product, related] = await Promise.all([
+  const [product, related, compatibility] = await Promise.all([
     getProductDetail(params.id),
     getRelatedProducts(params.id),
+    getProductCompatibilities(params.id),
   ]);
 
-  if (!product) {
-    notFound();
-  }
+  if (!product) notFound();
 
-  return <ApiProductDetailView product={product} relatedProducts={related} />;
+  return <ApiProductDetailView product={product} relatedProducts={related} compatibility={compatibility} />;
 }
