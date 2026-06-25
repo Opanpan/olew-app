@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { ProductListItem, ProductFiltersData } from '@/lib/publicApi';
+import type { ProductListItem, ProductFiltersData, AttributeDefinition } from '@/lib/publicApi';
 import { cn } from '@/lib/utils';
 import ApiFilterSidebar from './filters/ApiFilterSidebar';
 import ApiProductGrid from './ApiProductGrid';
@@ -14,6 +14,7 @@ const PAGE_SIZE = 12;
 interface CatalogClientProps {
   products: ProductListItem[];
   filterData: ProductFiltersData | null;
+  attrDefs?: AttributeDefinition[];
   lang: string;
   emptyMessage: string;
   searchPlaceholder: string;
@@ -24,6 +25,7 @@ interface CatalogClientProps {
 export default function CatalogClient({
   products,
   filterData,
+  attrDefs = [],
   lang,
   emptyMessage,
   searchPlaceholder,
@@ -100,12 +102,18 @@ export default function CatalogClient({
     router.push(`?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
 
-  // Client-side attribute filtering (API doesn't support attribute params yet)
+  // Client-side attribute filtering — now uses real attribute values from the API list response
   const filtered = products.filter(p => {
     const entries = Object.entries(activeAttrs).filter(([, v]) => v.length > 0);
     if (!entries.length) return true;
-    const name = (lang === 'id' ? p.name_id : p.name_en).toLowerCase();
-    return entries.every(([, vals]) => vals.some(v => name.includes(v.toLowerCase())));
+    return entries.every(([key, vals]) => {
+      const attrValue = p.attributes?.[key]?.value;
+      // If the product has no data for this attribute key, exclude it only when
+      // strict filtering is desired; here we keep products missing the attribute
+      // so users don't get an empty list when attributes aren't fully populated yet.
+      if (!attrValue) return true;
+      return vals.includes(attrValue);
+    });
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -123,6 +131,7 @@ export default function CatalogClient({
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
       <ApiFilterSidebar
         filterData={filterData}
+        attrDefs={attrDefs}
         lang={lang}
         categoryId={categoryId}
         activeAttrs={activeAttrs}

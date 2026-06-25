@@ -2,9 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Canvas, useLoader } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, useGLTF } from '@react-three/drei';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Loader2, Palette, Check, X, Droplets } from 'lucide-react';
@@ -12,6 +11,12 @@ import { HexColorPicker } from 'react-colorful';
 import { useLang } from '@/lib/LangContext';
 import { cn } from '@/lib/utils';
 import { colorClassMap } from './EnhancedColorPicker';
+
+// Preload local GLBs in the browser so they're ready before the user opens 3D view
+if (typeof window !== 'undefined') {
+  useGLTF.preload('/images/3d/base.glb');
+  useGLTF.preload('/images/3d/cap.glb');
+}
 
 export interface ColorConfig {
   colors: string[];
@@ -40,19 +45,47 @@ interface Product3DViewerProps {
 
 // ─── 3D Models ───────────────────────────────────────────────────────────────
 
-function BottleModel({ url, color, scale = 1 }: { url: string; color: string; scale?: number }) {
-  const gltf = useLoader(GLTFLoader, url);
-  // Clone once per GLTF load — never on color change
+// Dispose the materials we created on a cloned scene when it's replaced/unmounted.
+// (Geometries are shared with the cached GLTF, so we never dispose those.)
+function useDisposeOnUnmount(scene: THREE.Object3D) {
+  useEffect(() => {
+    return () => {
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material instanceof THREE.Material) {
+          child.material.dispose();
+        }
+      });
+    };
+  }, [scene]);
+}
+
+function BottleModel({ url, color, scale = 1, onHeightReady }: {
+  url: string; color: string; scale?: number;
+  onHeightReady?: (h: number) => void;
+}) {
+  const { scene: gltfScene } = useGLTF(url);
   const scene = useMemo(() => {
-    const s = gltf.scene.clone(true);
+    const s = gltfScene.clone(true);
     s.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.material = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.1 });
       }
     });
     return s;
-  }, [gltf.scene]);
-  // Update material color in-place (no new objects, no R3F remount)
+  }, [gltfScene]);
+  useDisposeOnUnmount(scene);
+
+  // Compute the actual world-space top of the bottle (box.max.y × scale).
+  // Using max.y rather than (max.y - min.y) accounts for models whose local origin
+  // is not at y=0 — so the cap always lands above the real top of the mesh.
+  useEffect(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const topY = box.max.y * (scale ?? 1);
+    onHeightReady?.(topY > 0 ? topY : 1);
+  }, [scene, scale, onHeightReady]);
+
+
+
   scene.traverse((child) => {
     if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
       child.material.color.set(color);
@@ -61,23 +94,30 @@ function BottleModel({ url, color, scale = 1 }: { url: string; color: string; sc
   return <primitive object={scene} scale={scale} />;
 }
 
-function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0 }: { url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number }) {
-  const gltf = useLoader(GLTFLoader, url);
+function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0 }: {
+  url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number;
+}) {
+  const { scene: gltfScene } = useGLTF(url);
   const scene = useMemo(() => {
-    const s = gltf.scene.clone(true);
+    const s = gltfScene.clone(true);
     s.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.material = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.3 });
       }
     });
     return s;
-  }, [gltf.scene]);
+  }, [gltfScene]);
+  useDisposeOnUnmount(scene);
   scene.traverse((child) => {
     if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
       child.material.color.set(color);
     }
   });
-  return <group position={[0, bottleHeight + positionY, 0]}><primitive object={scene} scale={scale} /></group>;
+  return (
+    <group position={[0, bottleHeight + positionY, 0]}>
+      <primitive object={scene} scale={scale} />
+    </group>
+  );
 }
 
 function PlaceholderModel({ color, type }: { color: string; type: 'bottle' | 'cap' }) {
@@ -407,6 +447,9 @@ export default function Product3DViewer({
   const { dict } = useLang();
   const [resetKey, setResetKey] = useState(0);
   const [anyPickerOpen, setAnyPickerOpen] = useState(false);
+  const recoveryAttempts = useRef(0);
+  // Dynamically computed from BottleModel bounding box — ensures CapModel sits on top
+  const [computedBottleHeight, setComputedBottleHeight] = useState(1);
 
   const hasColors = productColorConfig || capColorConfig;
 
@@ -443,8 +486,21 @@ export default function Product3DViewer({
       {/* 3D Canvas */}
       <Canvas
         key={resetKey}
+        dpr={[1, 1.5]}
         camera={{ position: [3, 2, 3], fov: 50 }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          const canvas = gl.domElement;
+          // Prevent the browser from permanently dropping the context; recover by remounting,
+          // but cap attempts so a GPU that simply can't handle the model doesn't loop forever.
+          canvas.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            if (recoveryAttempts.current < 3) {
+              recoveryAttempts.current += 1;
+              setTimeout(() => setResetKey((p) => p + 1), 100);
+            }
+          }, { passive: false });
+        }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.5} />
@@ -453,12 +509,23 @@ export default function Product3DViewer({
           <pointLight position={[0, 3, 0]} intensity={0.3} />
           <Environment preset="studio" />
           <>
-            <Suspense fallback={<PlaceholderModel color={bottleColor} type="bottle" />}>
-              <BottleModel url={bottleModelUrl} color={bottleColor} scale={bottleScale} />
+            <Suspense key={bottleModelUrl} fallback={<PlaceholderModel color={bottleColor} type="bottle" />}>
+              <BottleModel
+                url={bottleModelUrl}
+                color={bottleColor}
+                scale={bottleScale}
+                onHeightReady={setComputedBottleHeight}
+              />
             </Suspense>
             {productCategory === 'bottle' && capModelUrl && (
-              <Suspense fallback={<PlaceholderModel color={capColor} type="cap" />}>
-                <CapModel url={capModelUrl} color={capColor} bottleHeight={1} scale={capScale} positionY={capPositionY} />
+              <Suspense key={capModelUrl} fallback={<PlaceholderModel color={capColor} type="cap" />}>
+                <CapModel
+                  url={capModelUrl}
+                  color={capColor}
+                  bottleHeight={computedBottleHeight}
+                  scale={capScale}
+                  positionY={capPositionY}
+                />
               </Suspense>
             )}
           </>

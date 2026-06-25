@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Component, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
@@ -35,6 +35,35 @@ const Product3DViewer = dynamic(() => import('./Product3DViewer'), {
   ssr: false,
   loading: () => <Viewer3DLoading />,
 });
+
+// Resolve a 3D model URL — fall back to a local dummy GLB when the API returns
+// a mock/placeholder URL (cdn.example.com) or an empty value, so the model still renders.
+function resolve3DUrl(url: string | undefined, fallback: string): string {
+  if (!url) return fallback;
+  if (url.includes('cdn.example.com')) return fallback;
+  if (!/\.glb($|\?)/i.test(url)) return fallback;
+  return url;
+}
+
+// Simple error boundary to catch GLB load failures so the canvas doesn't crash/flicker.
+interface EBState { hasError: boolean }
+class Viewer3DErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, EBState> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div className="w-full aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <p className="text-xs text-gray-400 dark:text-gray-500">3D preview unavailable</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ── Accordion ─────────────────────────────────────────────────────────────────
 
@@ -126,10 +155,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   };
 
   // Color state for 3D viewer
-  const [customColor, setCustomColor] = useState('#22c55e');
+  const [customColor, setCustomColor] = useState('#ffffff');
   const [isCustomColor, setIsCustomColor] = useState(true);
-  const [capColor, setCapColor] = useState('#555555');
-  const [isCustomCapColor, setIsCustomCapColor] = useState(false);
+  const [capColor, setCapColor] = useState('#ffffff');
+  const [isCustomCapColor, setIsCustomCapColor] = useState(true);
 
   const isBottle = product.type.name_en.toLowerCase() === 'bottle';
   const categoryPath = isBottle ? 'bottles' : 'caps';
@@ -219,37 +248,74 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
+                  className="space-y-3"
                 >
-                  <Product3DViewer
-                    bottleModelUrl={product.three_d_file_path ?? '/images/3d/base.glb'}
-                    bottleColor={customColor}
-                    capColor={capColor}
-                    productCategory={isBottle ? 'bottle' : 'cap'}
-                    bottleScale={1}
-                    capModelUrl={selectedCompatItem ? '/images/3d/cap.glb' : undefined}
-                    capScale={selectedCompatItem?.scale ?? 1}
-                    capPositionY={selectedCompatItem ? selectedCompatItem.position.z / 300 : 0}
-                    productColorConfig={{
-                      colors: [],
-                      selectedColor: '',
-                      onColorChange: () => undefined,
-                      customColor,
-                      onCustomColorChange: setCustomColor,
-                      isCustom: isCustomColor,
-                      onIsCustomChange: setIsCustomColor,
-                      label: d.product_color,
-                    }}
-                    capColorConfig={selectedCompatItem ? {
-                      colors: [],
-                      selectedColor: '',
-                      onColorChange: () => undefined,
-                      customColor: capColor,
-                      onCustomColorChange: setCapColor,
-                      isCustom: isCustomCapColor,
-                      onIsCustomChange: setIsCustomCapColor,
-                      label: d.cap_color,
-                    } : undefined}
-                  />
+                  {/* ── Cap canvas (above, compact) — only shown once compatPreview is loaded
+                       so the URL never changes mid-render (avoids the appear/disappear flash) ── */}
+                  {selectedCompatItem && (
+                    <div>
+                      <p className="text-[10px] font-bold text-primary-500 dark:text-primary-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-500 inline-block" />
+                        {lang === 'id' ? selectedCompatItem.name_id : selectedCompatItem.name_en}
+                      </p>
+
+                      {/* Skeleton while detail is loading */}
+                      {(compatLoading || !compatPreview) ? (
+                        <div className="w-full aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center animate-pulse">
+                          <div className="w-8 h-8 rounded-full border-2 border-primary-300 border-t-primary-600 animate-spin" />
+                        </div>
+                      ) : (
+                        <Product3DViewer
+                          bottleModelUrl='/images/3d/cap.glb'
+                          bottleColor={capColor}
+                          capColor="#000000"
+                          productCategory="cap"
+                          bottleScale={1}
+                          capPositionY={0}
+                          compact
+                          productColorConfig={{
+                            colors: [],
+                            selectedColor: '',
+                            onColorChange: () => undefined,
+                            customColor: capColor,
+                            onCustomColorChange: setCapColor,
+                            isCustom: isCustomCapColor,
+                            onIsCustomChange: setIsCustomCapColor,
+                            label: d.cap_color,
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Bottle canvas (below, main) ── */}
+                  <div>
+                    {selectedCompatItem && (
+                      <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">
+                        {lang === 'id' ? product.name_id : product.name_en}
+                      </p>
+                    )}
+                    <Viewer3DErrorBoundary>
+                      <Product3DViewer
+                        bottleModelUrl={resolve3DUrl(product.three_d_file_path, '/images/3d/base.glb')}
+                        bottleColor={customColor}
+                        capColor="#000000"
+                        productCategory={isBottle ? 'bottle' : 'cap'}
+                        bottleScale={1}
+                        capPositionY={0}
+                        productColorConfig={{
+                          colors: [],
+                          selectedColor: '',
+                          onColorChange: () => undefined,
+                          customColor,
+                          onCustomColorChange: setCustomColor,
+                          isCustom: isCustomColor,
+                          onIsCustomChange: setIsCustomColor,
+                          label: d.product_color,
+                        }}
+                      />
+                    </Viewer3DErrorBoundary>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

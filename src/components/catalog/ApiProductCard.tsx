@@ -102,9 +102,20 @@ export default function ApiProductCard({ product, lang, index = 0 }: ApiProductC
 
       {/* ── Info ── */}
       <div className="pt-3 px-0.5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-2.5 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-200">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1.5 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-200">
           {name}
         </h3>
+
+        {/* Key attribute pills from API */}
+        {product.attributes && Object.keys(product.attributes).length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2.5">
+            {Object.entries(product.attributes).slice(0, 3).map(([key, attr]) => (
+              <span key={key} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">
+                {attr.value}{attr.unit ? ` ${attr.unit}` : ''}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Action row */}
         <div className="flex items-center gap-1.5">

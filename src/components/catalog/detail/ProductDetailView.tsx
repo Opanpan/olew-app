@@ -105,7 +105,7 @@ export default function ProductDetailView({ product, allProducts, images = [] }:
 
   const availableCaps = allProducts.filter(p => p.category === 'cap');
   const [selectedColor, setSelectedColor] = useState(product.colors[0]);
-  const [customColor, setCustomColor] = useState('#22c55e');
+  const [customColor, setCustomColor] = useState('#ffffff');
   const [isCustomBottleColor, setIsCustomBottleColor] = useState(false);
   const [selectedCap, setSelectedCap] = useState<Product | null>(null);
   const [capColor, setCapColor] = useState('#000000');

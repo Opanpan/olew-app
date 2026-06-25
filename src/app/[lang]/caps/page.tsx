@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getDictionary } from '@/lib/dictionary';
 import type { Lang } from '@/lib/dictionary';
-import { getProducts, getProductFiltersData } from '@/lib/publicApi';
+import { getProducts, getProductFiltersData, getAttributeDefinitions } from '@/lib/publicApi';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CatalogClient from '@/components/catalog/CatalogClient';
 
@@ -14,17 +14,22 @@ export default async function CapsPage({ params, searchParams }: CapsPageProps) 
   const lang = params.lang as Lang;
   const dict = getDictionary(lang);
 
-  const filterData = await getProductFiltersData();
+  const [filterData, attrDefsData] = await Promise.all([
+    getProductFiltersData(),
+    getAttributeDefinitions(),
+  ]);
+
   const capTypeId = filterData?.types.find(t => t.name_en === 'Cap')?.id;
 
   const search = typeof searchParams.search === 'string' ? searchParams.search : '';
   const categoryId = typeof searchParams.category_id === 'string' ? searchParams.category_id : '';
 
+  // Same fix as bottles: skip type_id when category_id is active to avoid empty AND intersection
   const result = await getProducts({
     limit: 100,
     offset: 0,
     search: search || undefined,
-    type_id: capTypeId,
+    type_id: categoryId ? undefined : capTypeId,
     category_id: categoryId || undefined,
   });
 
@@ -45,6 +50,7 @@ export default async function CapsPage({ params, searchParams }: CapsPageProps) 
             <CatalogClient
               products={result.data}
               filterData={filterData}
+              attrDefs={attrDefsData?.attributes ?? []}
               lang={lang}
               emptyMessage={dict.catalog.caps.empty_state}
               searchPlaceholder={dict.catalog.filters.search_placeholder}

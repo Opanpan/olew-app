@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, SlidersHorizontal, ChevronDown } from 'lucide-react';
-import { ProductFiltersData } from '@/lib/publicApi';
+import { ProductFiltersData, AttributeDefinition } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import { cn } from '@/lib/utils';
 import DualRangeSlider from './DualRangeSlider';
 
 export interface ApiFilterSidebarProps {
   filterData: ProductFiltersData | null;
+  attrDefs?: AttributeDefinition[];
   lang: string;
   categoryId: string;
   activeAttrs: Record<string, string[]>;
@@ -99,6 +100,7 @@ function Accordion({ title, children, defaultOpen = true, bold = false }: Accord
 
 export default function ApiFilterSidebar({
   filterData,
+  attrDefs = [],
   lang,
   categoryId,
   activeAttrs,
@@ -192,10 +194,12 @@ export default function ApiFilterSidebar({
               {numericKeys.map((key) => {
                 const meta = numericMeta[key];
                 const current = activeRanges[key] ?? [meta.min, meta.max];
+                const def = attrDefs.find(d => d.key === key);
+                const label = def ? (lang === 'id' ? def.label_id : def.label_en) : formatKey(key);
                 return (
                   <div key={key}>
                     <p className="text-xs font-bold uppercase tracking-wide text-primary-700 dark:text-primary-400 mb-2">
-                      {formatKey(key)}
+                      {label}
                     </p>
                     <DualRangeSlider
                       min={meta.min}
@@ -215,8 +219,10 @@ export default function ApiFilterSidebar({
         {categoricalKeys.map((key) => {
           const values = attributes[key];
           const active = activeAttrs[key] ?? [];
+          const def = attrDefs.find(d => d.key === key);
+          const label = def ? (lang === 'id' ? def.label_id : def.label_en) : formatKey(key);
           return (
-            <Accordion key={key} title={formatKey(key)} bold defaultOpen>
+            <Accordion key={key} title={label} bold defaultOpen>
               <div className="space-y-2">
                 {values.map((value) => {
                   const checked = active.includes(value);

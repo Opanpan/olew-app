@@ -87,6 +87,14 @@ export function getGallery(): Promise<GalleryItem[]> {
 
 // ── Product API Types ─────────────────────────────────────────────────────────
 
+/** Per-product attribute value returned in list and detail responses */
+export interface ProductAttributePublicItem {
+  label_en: string;
+  label_id: string;
+  value: string;
+  unit?: string;
+}
+
 export interface ProductListItem {
   id: string;
   name_en: string;
@@ -96,6 +104,22 @@ export interface ProductListItem {
   thumbnail: string;
   min_price: number;
   three_d_file_path?: string;
+  /** Key → attribute data (e.g. material, volume, height) — enables real attribute filtering */
+  attributes?: Record<string, ProductAttributePublicItem>;
+}
+
+/** Attribute definition from /product-attribute-definitions */
+export interface AttributeDefinition {
+  id: string;
+  key: string;
+  label_en: string;
+  label_id: string;
+  description_en?: string;
+  description_id?: string;
+  data_type: string;
+  is_required: boolean;
+  is_active: boolean;
+  sort_order: number;
 }
 
 export interface ProductMeta {
@@ -180,6 +204,7 @@ export interface ProductFiltersData {
   types: ProductTypeBasic[];
   categories: ProductCategoryBasic[];
   attributes: Record<string, string[]>;
+  price_range?: { min: number; max: number };
 }
 
 // ── Product API Fetchers ──────────────────────────────────────────────────────
@@ -275,6 +300,55 @@ export async function getProductFiltersData(): Promise<ProductFiltersData | null
       types: Array.isArray(data.types) ? data.types : [],
       categories: Array.isArray(data.categories) ? data.categories : [],
       attributes: (data.attributes && typeof data.attributes === 'object') ? data.attributes : {},
+      price_range: data.price_range ?? undefined,
+    };
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    return null;
+  }
+}
+
+// ── Latest / Popular / Attribute Definitions ─────────────────────────────────
+
+async function fetchProductList(url: string): Promise<ProductListItem[]> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const json = await res.json();
+    devLog(url, res.status, null, json);
+    if (!res.ok) return [];
+    const data = json?.data;
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    return [];
+  }
+}
+
+export function getLatestProducts(): Promise<ProductListItem[]> {
+  return fetchProductList(`${BASE_URL}/api/v1/public/products/latest`);
+}
+
+export function getPopularProducts(): Promise<ProductListItem[]> {
+  return fetchProductList(`${BASE_URL}/api/v1/public/products/popular`);
+}
+
+export interface AttributeDefinitionListResponse {
+  attributes: AttributeDefinition[];
+  total_count: number;
+}
+
+export async function getAttributeDefinitions(): Promise<AttributeDefinitionListResponse | null> {
+  const url = `${BASE_URL}/api/v1/public/product-attribute-definitions`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    const json = await res.json();
+    devLog(url, res.status, null, json);
+    if (!res.ok) return null;
+    const data = json?.data;
+    if (!data) return null;
+    return {
+      attributes: Array.isArray(data.attributes) ? data.attributes : [],
+      total_count: data.total_count ?? 0,
     };
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);

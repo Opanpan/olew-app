@@ -1,162 +1,281 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
+import { getProductFiltersData, type ProductFiltersData, type ProductTypeBasic, type ProductCategoryBasic } from '@/lib/publicApi';
+
+// ── Category icon mapping ─────────────────────────────────────────────────────
+// Maps category name keywords → a colored SVG illustration + gradient
+
+interface CategoryIcon {
+  bg: string;
+  svg: React.ReactNode;
+}
+
+function BottleIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 64 80" className="w-10 h-12" fill="none">
+      <rect x="24" y="2" width="16" height="10" rx="3" fill={color} opacity="0.9" />
+      <path d="M24 12 Q18 20 16 28 L16 68 Q16 76 32 76 Q48 76 48 68 L48 28 Q46 20 40 12 Z" fill={color} opacity="0.85" />
+      <rect x="22" y="36" width="20" height="24" rx="2" fill="white" opacity="0.25" />
+    </svg>
+  );
+}
+
+function CapIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 64 48" className="w-10 h-8" fill="none">
+      <ellipse cx="32" cy="40" rx="28" ry="7" fill={color} opacity="0.3" />
+      <path d="M8 36 Q8 8 32 8 Q56 8 56 36 Z" fill={color} opacity="0.85" />
+      <rect x="10" y="36" width="44" height="8" rx="4" fill={color} />
+      <ellipse cx="32" cy="10" rx="18" ry="5" fill={color} opacity="0.6" />
+    </svg>
+  );
+}
+
+const BOTTLE_COLORS = [
+  '#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#0ea5e9'
+];
+const CAP_COLORS = [
+  '#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#3b82f6','#10b981'
+];
+
+function getCategoryIcon(typeKey: 'bottle' | 'cap', index: number): CategoryIcon {
+  if (typeKey === 'bottle') {
+    const color = BOTTLE_COLORS[index % BOTTLE_COLORS.length];
+    return {
+      bg: `${color}15`,
+      svg: <BottleIcon color={color} />,
+    };
+  }
+  const color = CAP_COLORS[index % CAP_COLORS.length];
+  return {
+    bg: `${color}15`,
+    svg: <CapIcon color={color} />,
+  };
+}
+
+// ── Determine which type a category belongs to ─────────────────────────────
+
+function resolveTypeForCategory(
+  category: ProductCategoryBasic,
+  types: ProductTypeBasic[]
+): ProductTypeBasic | null {
+  const name = (category.name_en + ' ' + category.name_id).toLowerCase();
+  if (name.includes('bottle') || name.includes('botol')) {
+    return types.find(t => t.name_en.toLowerCase() === 'bottle') ?? null;
+  }
+  if (name.includes('cap') || name.includes('tutup') || name.includes('closure') || name.includes('lid')) {
+    return types.find(t => t.name_en.toLowerCase() === 'cap') ?? null;
+  }
+  return null;
+}
+
+// ── Category circle ───────────────────────────────────────────────────────────
+
+function CategoryCircle({
+  category,
+  typeSlug,
+  icon,
+  lang,
+  index,
+}: {
+  category: ProductCategoryBasic;
+  typeSlug: 'bottles' | 'caps';
+  icon: CategoryIcon;
+  lang: string;
+  index: number;
+}) {
+  const name = lang === 'id' ? category.name_id : category.name_en;
+  const href = `/${lang}/products?cat=${typeSlug}&s_cat=${category.id}`;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 + index * 0.06, duration: 0.4 }}
+      className="flex flex-col items-center gap-2.5 group cursor-pointer"
+    >
+      <Link href={href} className="flex flex-col items-center gap-2.5">
+        <div
+          className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 border-transparent group-hover:border-primary-300 dark:group-hover:border-primary-600 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+          style={{ backgroundColor: icon.bg }}
+        >
+          {icon.svg}
+        </div>
+        <span className="text-xs md:text-sm font-semibold text-primary-600 dark:text-primary-400 text-center leading-tight max-w-[80px] group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
+          {name}
+        </span>
+      </Link>
+    </motion.div>
+  );
+}
+
+// ── Type section ──────────────────────────────────────────────────────────────
+
+function TypeSection({
+  type,
+  categories,
+  lang,
+  sectionIndex,
+}: {
+  type: ProductTypeBasic;
+  categories: ProductCategoryBasic[];
+  lang: string;
+  sectionIndex: number;
+}) {
+  const typeSlug = type.name_en.toLowerCase() === 'bottle' ? 'bottles' : 'caps';
+  const typeLabel = lang === 'id' ? type.name_id : type.name_en;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: sectionIndex * 0.2, duration: 0.5 }}
+      className="mb-10"
+    >
+      {/* Section heading */}
+      <h2 className="text-xl md:text-2xl font-bold text-primary-700 dark:text-primary-400 mb-6">
+        Catalog {typeLabel}
+      </h2>
+
+      {/* Category circles */}
+      <div className="flex flex-wrap gap-6 md:gap-8">
+        {categories.map((cat, i) => {
+          const icon = getCategoryIcon(typeSlug === 'bottles' ? 'bottle' : 'cap', i);
+          return (
+            <CategoryCircle
+              key={cat.id}
+              category={cat}
+              typeSlug={typeSlug}
+              icon={icon}
+              lang={lang}
+              index={i}
+            />
+          );
+        })}
+
+        {/* "All" shortcut */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 + categories.length * 0.06, duration: 0.4 }}
+          className="flex flex-col items-center gap-2.5 group cursor-pointer"
+        >
+          <Link href={`/${lang}/${typeSlug}`} className="flex flex-col items-center gap-2.5">
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 group-hover:border-primary-400 dark:group-hover:border-primary-500 group-hover:scale-110 transition-all duration-300 bg-gray-50 dark:bg-gray-800/50">
+              <span className="text-2xl font-bold text-gray-300 dark:text-gray-600 group-hover:text-primary-400 transition-colors">
+                ···
+              </span>
+            </div>
+            <span className="text-xs md:text-sm font-semibold text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+              {lang === 'id' ? 'Semua' : 'All'}
+            </span>
+          </Link>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function ProductsLanding() {
   const { lang, dict } = useLang();
+  const d = dict.catalog.products_landing;
+  const [filterData, setFilterData] = useState<ProductFiltersData | null>(null);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
+  useEffect(() => {
+    getProductFiltersData().then(setFilterData);
+  }, []);
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: 'easeOut',
-      },
-    },
-  };
+  // Group categories by type using name heuristics
+  const grouped: { type: ProductTypeBasic; categories: ProductCategoryBasic[] }[] = [];
+  if (filterData) {
+    for (const type of filterData.types) {
+      const cats = filterData.categories.filter(cat => {
+        const t = resolveTypeForCategory(cat, filterData.types);
+        return t?.id === type.id;
+      });
+      grouped.push({ type, categories: cats });
+    }
+  }
 
   return (
-    <div className="min-h-screen pt-32 pb-20">
+    <div className="min-h-screen pt-28 pb-20 bg-white dark:bg-gray-950">
       <div className="container-custom mx-auto px-4 md:px-8">
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto mb-16"
+          transition={{ duration: 0.5 }}
+          className="mb-12"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400 text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            {dict.catalog.products_landing.badge}
-          </div>
-          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            {dict.catalog.products_landing.title}
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            {d.title}
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300">
-            {dict.catalog.products_landing.subtitle}
+          <p className="text-gray-500 dark:text-gray-400">
+            {d.subtitle}
           </p>
         </motion.div>
 
-        {/* Product Cards */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-12"
-        >
-          {/* Bottles Card */}
-          <motion.div variants={itemVariants}>
-            <Link href={`/${lang}/bottles`}>
-              <div className="group relative h-[500px] rounded-3xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-500 hover:shadow-2xl hover:shadow-primary-500/20">
-                {/* Background Image */}
-                <div className="absolute inset-0 opacity-20 dark:opacity-10">
-                  <img
-                    src="/images/banners/bottles-banner.jpg"
-                    alt="Bottles"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    onError={(e) => {
-                      e.currentTarget.src = '/images/banners/broken-image.png';
-                    }}
-                  />
-                </div>
+        {/* Divider */}
+        <div className="border-t border-gray-100 dark:border-gray-800 mb-10" />
 
-                {/* Content */}
-                <div className="relative h-full flex flex-col justify-end p-8">
-                  <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl p-6 transform group-hover:translate-y-[-8px] transition-transform duration-500">
-                    <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                      {dict.catalog.products_landing.bottles_title}
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                      {dict.catalog.products_landing.bottles_description}
-                    </p>
-                    <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-semibold group-hover:gap-4 transition-all">
-                      {dict.catalog.products_landing.bottles_cta}
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+        {/* Type sections with category circles */}
+        {filterData === null ? (
+          // Loading skeleton
+          <div className="space-y-10">
+            {[0, 1].map(i => (
+              <div key={i}>
+                <div className="h-7 w-40 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse mb-6" />
+                <div className="flex gap-8">
+                  {[0, 1, 2, 3].map(j => (
+                    <div key={j} className="flex flex-col items-center gap-2.5">
+                      <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                      <div className="h-3 w-16 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
                     </div>
-                  </div>
+                  ))}
                 </div>
-
-                {/* Hover Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
-            </Link>
-          </motion.div>
+            ))}
+          </div>
+        ) : (
+          grouped.map((group, i) => (
+            <TypeSection
+              key={group.type.id}
+              type={group.type}
+              categories={group.categories}
+              lang={lang}
+              sectionIndex={i}
+            />
+          ))
+        )}
 
-          {/* Caps Card */}
-          <motion.div variants={itemVariants}>
-            <Link href={`/${lang}/caps`}>
-              <div className="group relative h-[500px] rounded-3xl overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-500 hover:shadow-2xl hover:shadow-primary-500/20">
-                {/* Background Image */}
-                <div className="absolute inset-0 opacity-20 dark:opacity-10">
-                  <img
-                    src="/images/banners/caps-banner.jpg"
-                    alt="Caps"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    onError={(e) => {
-                      e.currentTarget.src = '/images/banners/broken-image.png';
-                    }}
-                  />
-                </div>
-
-                {/* Content */}
-                <div className="relative h-full flex flex-col justify-end p-8">
-                  <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl p-6 transform group-hover:translate-y-[-8px] transition-transform duration-500">
-                    <h2 className="font-display text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                      {dict.catalog.products_landing.caps_title}
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                      {dict.catalog.products_landing.caps_description}
-                    </p>
-                    <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-semibold group-hover:gap-4 transition-all">
-                      {dict.catalog.products_landing.caps_cta}
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hover Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              </div>
-            </Link>
-          </motion.div>
-        </motion.div>
-
-        {/* Confidence Text */}
+        {/* Confidence strip */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="mt-16 pt-10 border-t border-gray-100 dark:border-gray-800"
         >
-          <div className="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-950/30 dark:to-purple-950/30 border border-primary-200 dark:border-primary-800">
+          <div className="inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800">
             <div className="flex -space-x-2">
-              <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white dark:border-gray-900">
-                ✓
-              </div>
-              <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white dark:border-gray-900">
-                ✓
-              </div>
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white dark:border-gray-900">
-                ✓
-              </div>
+              {['#3b82f6','#8b5cf6','#06b6d4'].map((color, i) => (
+                <div
+                  key={i}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white dark:border-gray-900"
+                  style={{ backgroundColor: color }}
+                >
+                  ✓
+                </div>
+              ))}
             </div>
-            <p className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
-              {dict.catalog.products_landing.confidence_text}
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              {d.confidence_text}
             </p>
           </div>
         </motion.div>
