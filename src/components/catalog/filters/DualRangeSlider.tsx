@@ -39,26 +39,28 @@ export default function DualRangeSlider({ min, max, unit, value, onChange }: Dua
   const highPct = pct(local[1]);
 
   return (
-    <div className="space-y-2">
-      {/* Value labels */}
-      <div className="flex items-center gap-1 text-sm font-semibold text-gray-700 dark:text-gray-300">
-        <span>{local[0]}</span>
-        <span className="text-gray-400 font-normal text-xs">{unit}</span>
-        <span className="mx-1 text-gray-400">–</span>
-        <span>{local[1]}</span>
-        <span className="text-gray-400 font-normal text-xs">{unit}</span>
+    <div className="space-y-2.5">
+      {/* Min / max labels */}
+      <div className="flex items-center justify-between">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[11px] font-semibold">
+          {local[0]} <span className="font-normal opacity-70">{unit}</span>
+        </span>
+        <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[11px] font-semibold">
+          {local[1]} <span className="font-normal opacity-70">{unit}</span>
+        </span>
       </div>
 
-      {/* Slider track */}
-      <div className="relative h-5 flex items-center">
+      {/* Track */}
+      <div className="relative h-4 flex items-center">
         {/* Background track */}
-        <div className="absolute w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full" />
-        {/* Active range fill */}
+        <div className="absolute w-full h-1 bg-gray-100 dark:bg-gray-700 rounded-full" />
+        {/* Active fill */}
         <div
-          className="absolute h-1.5 bg-primary-500 rounded-full"
+          className="absolute h-1 rounded-full bg-gradient-to-r from-primary-400 to-primary-600"
           style={{ left: `${lowPct}%`, width: `${highPct - lowPct}%` }}
         />
-        {/* Low handle — thumb-only pointer events via CSS, z-index rises when pushed to max */}
+        {/* Low handle */}
         <input
           type="range"
           min={min}
@@ -69,6 +71,7 @@ export default function DualRangeSlider({ min, max, unit, value, onChange }: Dua
           className="absolute w-full appearance-none bg-transparent range-thumb"
           style={{ zIndex: local[0] >= local[1] ? 5 : 3 }}
         />
+        {/* High handle */}
         <input
           type="range"
           min={min}
