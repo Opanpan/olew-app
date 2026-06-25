@@ -6,7 +6,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-DOMAIN="welo-app.kinderheim511.com"
+DOMAIN="olew-app.kinderheim511.com"
 
 echo -e "${YELLOW}=== Olew App — Production Deploy ===${NC}\n"
 
