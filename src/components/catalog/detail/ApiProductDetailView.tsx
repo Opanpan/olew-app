@@ -144,11 +144,15 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     if (selectedCompatId === id) {
       setSelectedCompatId(null);
       setCompatPreview(null);
+      setCapScale(1);
+      setCapPositionY(0);
       return;
     }
     setSelectedCompatId(id);
     setCompatLoading(true);
     setCompatPreview(null);
+    setCapScale(1);
+    setCapPositionY(0);
     const detail = await getProductDetail(id);
     setCompatPreview(detail);
     setCompatLoading(false);
@@ -159,6 +163,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [isCustomColor, setIsCustomColor] = useState(true);
   const [capColor, setCapColor] = useState('#ffffff');
   const [isCustomCapColor, setIsCustomCapColor] = useState(true);
+
+  // Cap scale & position sliders for mix-and-match
+  const [capScale, setCapScale] = useState(1);
+  const [capPositionY, setCapPositionY] = useState(0);
 
   const isBottle = product.type.name_en.toLowerCase() === 'bottle';
   const categoryPath = isBottle ? 'bottles' : 'caps';
@@ -250,72 +258,72 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                   transition={{ duration: 0.2 }}
                   className="space-y-3"
                 >
-                  {/* ── Cap canvas (above, compact) — only shown once compatPreview is loaded
-                       so the URL never changes mid-render (avoids the appear/disappear flash) ── */}
-                  {selectedCompatItem && (
-                    <div>
-                      <p className="text-[10px] font-bold text-primary-500 dark:text-primary-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary-500 inline-block" />
-                        {lang === 'id' ? selectedCompatItem.name_id : selectedCompatItem.name_en}
-                      </p>
+                  {/* ── Single canvas: bottle + cap together ── */}
+                  <Viewer3DErrorBoundary>
+                    <Product3DViewer
+                      bottleModelUrl={product.three_d_file_path || '/images/3d/base.glb'}
+                      capModelUrl={
+                        compatPreview?.three_d_file_path || (selectedCompatItem ? '/images/3d/cap.glb' : undefined)
+                      }
+                      bottleColor={customColor}
+                      capColor={capColor}
+                      productCategory={isBottle ? 'bottle' : 'cap'}
+                      bottleScale={1}
+                      capScale={capScale}
+                      capPositionY={capPositionY}
+                      productColorConfig={{
+                        colors: [],
+                        selectedColor: '',
+                        onColorChange: () => undefined,
+                        customColor,
+                        onCustomColorChange: setCustomColor,
+                        isCustom: isCustomColor,
+                        onIsCustomChange: setIsCustomColor,
+                        label: d.product_color,
+                      }}
+                      capColorConfig={selectedCompatItem ? {
+                        colors: [],
+                        selectedColor: '',
+                        onColorChange: () => undefined,
+                        customColor: capColor,
+                        onCustomColorChange: setCapColor,
+                        isCustom: isCustomCapColor,
+                        onIsCustomChange: setIsCustomCapColor,
+                        label: d.cap_color,
+                      } : undefined}
+                    />
+                  </Viewer3DErrorBoundary>
 
-                      {/* Skeleton while detail is loading */}
-                      {(compatLoading || !compatPreview) ? (
-                        <div className="w-full aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center animate-pulse">
-                          <div className="w-8 h-8 rounded-full border-2 border-primary-300 border-t-primary-600 animate-spin" />
+                  {/* ── Scale & position sliders (shown when a cap is selected) ── */}
+                  {selectedCompatItem && (
+                    <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
+                      <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                        {lang === 'id' ? 'Sesuaikan Tutup' : 'Adjust Cap'}
+                      </p>
+                      {[
+                        { label: lang === 'id' ? 'Skala Tutup' : 'Cap Scale', value: capScale, setter: setCapScale, min: 0.1, max: 3, step: 0.05 },
+                        { label: lang === 'id' ? 'Posisi Tutup' : 'Cap Position', value: capPositionY, setter: setCapPositionY, min: -1, max: 2, step: 0.05 },
+                      ].map(s => (
+                        <div key={s.label}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-semibold text-gray-700 dark:text-white">{s.label}</label>
+                            <span className="text-xs font-mono font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30 px-2 py-0.5 rounded">
+                              {s.value.toFixed(2)}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={s.min}
+                            max={s.max}
+                            step={s.step}
+                            value={s.value}
+                            onChange={e => s.setter(parseFloat(e.target.value))}
+                            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                          />
                         </div>
-                      ) : (
-                        <Product3DViewer
-                          bottleModelUrl='/images/3d/cap.glb'
-                          bottleColor={capColor}
-                          capColor="#000000"
-                          productCategory="cap"
-                          bottleScale={1}
-                          capPositionY={0}
-                          compact
-                          productColorConfig={{
-                            colors: [],
-                            selectedColor: '',
-                            onColorChange: () => undefined,
-                            customColor: capColor,
-                            onCustomColorChange: setCapColor,
-                            isCustom: isCustomCapColor,
-                            onIsCustomChange: setIsCustomCapColor,
-                            label: d.cap_color,
-                          }}
-                        />
-                      )}
+                      ))}
                     </div>
                   )}
-
-                  {/* ── Bottle canvas (below, main) ── */}
-                  <div>
-                    {selectedCompatItem && (
-                      <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5">
-                        {lang === 'id' ? product.name_id : product.name_en}
-                      </p>
-                    )}
-                    <Viewer3DErrorBoundary>
-                      <Product3DViewer
-                        bottleModelUrl={resolve3DUrl(product.three_d_file_path, '/images/3d/base.glb')}
-                        bottleColor={customColor}
-                        capColor="#000000"
-                        productCategory={isBottle ? 'bottle' : 'cap'}
-                        bottleScale={1}
-                        capPositionY={0}
-                        productColorConfig={{
-                          colors: [],
-                          selectedColor: '',
-                          onColorChange: () => undefined,
-                          customColor,
-                          onCustomColorChange: setCustomColor,
-                          isCustom: isCustomColor,
-                          onIsCustomChange: setIsCustomColor,
-                          label: d.product_color,
-                        }}
-                      />
-                    </Viewer3DErrorBoundary>
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
