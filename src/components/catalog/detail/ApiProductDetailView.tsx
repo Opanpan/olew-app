@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Component, type ReactNode } from 'react';
+import { useState, useRef, Component, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Box, Image as ImageIcon, Package, ArrowLeft, ArrowRight,
@@ -133,6 +133,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [openAttributes, setOpenAttributes] = useState(true);
 
   // Compatible product inline preview
+  const compatScrollRef = useRef<HTMLDivElement>(null);
+  const compatDrag = useRef({ active: false, hasDragged: false, startX: 0, scrollLeft: 0 });
   const [selectedCompatId, setSelectedCompatId] = useState<string | null>(null);
   const [compatPreview, setCompatPreview] = useState<ProductDetail | null>(null);
   const [compatLoading, setCompatLoading] = useState(false);
@@ -354,7 +356,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
           </div>
 
           {/* ══ RIGHT: Product info (sticky) ══ */}
-          <div className="space-y-5 lg:sticky lg:top-28 lg:self-start">
+          <div className="space-y-5 lg:sticky lg:top-28 lg:self-start min-w-0">
 
             {/* ── Product header ── */}
             <div>
@@ -503,7 +505,26 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                 </div>
 
                 {/* Horizontal scroll list */}
-                <div className="p-4 overflow-x-auto scrollbar-hide">
+                <div
+                  ref={compatScrollRef}
+                  className="p-4 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+                  onMouseDown={(e) => {
+                    const el = compatScrollRef.current;
+                    if (!el) return;
+                    compatDrag.current = { active: true, hasDragged: false, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+                  }}
+                  onMouseMove={(e) => {
+                    const el = compatScrollRef.current;
+                    if (!el || !compatDrag.current.active) return;
+                    e.preventDefault();
+                    const x = e.pageX - el.offsetLeft;
+                    const delta = x - compatDrag.current.startX;
+                    if (Math.abs(delta) > 4) compatDrag.current.hasDragged = true;
+                    el.scrollLeft = compatDrag.current.scrollLeft - delta;
+                  }}
+                  onMouseUp={() => { compatDrag.current.active = false; }}
+                  onMouseLeave={() => { compatDrag.current.active = false; }}
+                >
                   <div className="flex gap-3">
                     {compatibility.compatible.map((item) => {
                       const name = lang === 'id' ? item.name_id : item.name_en;
@@ -511,7 +532,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       return (
                         <button
                           key={item.id}
-                          onClick={() => handleCompatClick(item.id)}
+                          onClick={() => { if (!compatDrag.current.hasDragged) handleCompatClick(item.id); }}
                           className={cn(
                             'flex-shrink-0 flex flex-col items-center gap-2 p-3 w-28 rounded-xl border transition-all duration-200 group',
                             isSelected
