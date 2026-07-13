@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Phone, Mail, Instagram, Facebook, Linkedin, Twitter } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
@@ -21,9 +22,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">W</span>
-              </div>
+              <Image src="/images/logos/olew-logo.png" alt="Olew Group" width={40} height={40} className="w-10 h-10" />
               <div>
                 <h3 className="font-display text-lg font-bold">Olew Group</h3>
               </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -57,9 +58,7 @@ export default function Navigation() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href={`/${lang}`} className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">W</span>
-            </div>
+            <Image src="/images/logos/olew-logo.png" alt="Olew Group" width={48} height={48} className="w-12 h-12" priority />
             <div className="hidden sm:block">
               <h1 className="font-display text-xl font-bold text-gray-900 dark:text-white">
                 Olew Group
