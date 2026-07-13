@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Droplet, Sparkles, Pill, Wind, ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,34 @@ const productBgGradients = [
   'from-amber-500/10 to-orange-600/10 dark:from-amber-500/20 dark:to-orange-600/20',
   'from-blue-500/10 to-sky-600/10 dark:from-blue-500/20 dark:to-sky-600/20',
 ];
+
+const productBgImages: Record<number, { src: string; base: string; overlay: string }> = {
+  0: {
+    src: '/images/banners/body-care-bg.png',
+    base: 'bg-rose-50',
+    overlay: 'bg-gradient-to-r from-rose-50 via-rose-50/80 to-transparent dark:from-gray-900 dark:via-gray-900/70',
+  },
+  1: {
+    src: '/images/banners/skincare-bg.png',
+    base: 'bg-violet-50',
+    overlay: 'bg-gradient-to-r from-violet-50 via-violet-50/80 to-transparent dark:from-gray-900 dark:via-gray-900/70',
+  },
+  2: {
+    src: '/images/banners/pharmacy-bg.png',
+    base: 'bg-sky-50',
+    overlay: 'bg-gradient-to-r from-sky-50 via-sky-50/80 to-transparent dark:from-gray-900 dark:via-gray-900/70',
+  },
+  3: {
+    src: '/images/banners/pump-lotion-bg.png',
+    base: 'bg-amber-50',
+    overlay: 'bg-gradient-to-r from-amber-50 via-amber-50/80 to-transparent dark:from-gray-900 dark:via-gray-900/70',
+  },
+  4: {
+    src: '/images/banners/perfume-bg.png',
+    base: 'bg-sky-50',
+    overlay: 'bg-gradient-to-r from-sky-50 via-sky-50/80 to-transparent dark:from-gray-900 dark:via-gray-900/70',
+  },
+};
 
 export default function ProductsSection() {
   const { dict } = useLang();
@@ -65,6 +94,7 @@ export default function ProductsSection() {
           {dict.products.items.map((product, index) => {
             const Icon = productIcons[index];
             const isLarge = index === 0;
+            const bgImage = productBgImages[index];
 
             return (
               <motion.div
@@ -77,11 +107,24 @@ export default function ProductsSection() {
               >
                 <div
                   className={cn(
-                    'h-full rounded-3xl overflow-hidden bg-gradient-to-br border border-gray-100 dark:border-gray-800 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2',
-                    productBgGradients[index]
+                    'relative h-full rounded-3xl overflow-hidden bg-gradient-to-br border border-gray-100 dark:border-gray-800 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2',
+                    bgImage ? bgImage.base : productBgGradients[index]
                   )}
                 >
-                  <div className="p-6 md:p-8">
+                  {bgImage && (
+                    <>
+                      <Image
+                        src={bgImage.src}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes={isLarge ? '(min-width: 1024px) 66vw, 100vw' : '(min-width: 1024px) 33vw, 100vw'}
+                      />
+                      <div className={cn('absolute inset-0', bgImage.overlay)} />
+                    </>
+                  )}
+
+                  <div className="relative p-6 md:p-8">
                     <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br shadow-lg group-hover:scale-110 transition-transform', productGradients[index])}>
                       <Icon className="w-7 h-7 text-white" />
                     </div>
