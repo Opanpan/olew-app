@@ -146,30 +146,31 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     if (selectedCompatId === id) {
       setSelectedCompatId(null);
       setCompatPreview(null);
-      setCapScale(1);
       setCapPositionY(0);
       return;
     }
-    // Seed scale/position from the admin-configured default for this cap, so the
-    // viewer opens already fitted rather than always starting at scale 1 / position 0.
-    const item = compatibility?.compatible.find(c => c.id === id);
     setSelectedCompatId(id);
     setCompatLoading(true);
     setCompatPreview(null);
-    setCapScale(item?.scale ?? 1);
     setCapPositionY(0);
     const detail = await getProductDetail(id);
     setCompatPreview(detail);
     setCompatLoading(false);
   };
 
-  // Horizontal cap alignment is an admin-configured correction for this specific
-  // model pairing (not a customer preference), so it's applied as a fixed offset
-  // rather than exposed as a slider.
+  // Scale and horizontal alignment are admin-configured for this specific model
+  // pairing (not a customer preference), so they're applied as fixed values from
+  // the API response rather than exposed as sliders.
+  const capScale = selectedCompatItem?.scale ?? 1;
   const capOffsetX = selectedCompatItem?.position?.x ?? 0;
   const capOffsetZ = selectedCompatItem?.position?.z ?? 0;
-  const capPositionYMin = selectedCompatItem?.min_position_vertical ?? -1;
-  const capPositionYMax = selectedCompatItem?.max_position_vertical ?? 2;
+  // Guard against a misconfigured admin range (min === max, or min > max) collapsing
+  // the slider to zero width and making it impossible to drag.
+  const rawPositionYMin = selectedCompatItem?.min_position_vertical ?? -1;
+  const rawPositionYMax = selectedCompatItem?.max_position_vertical ?? 2;
+  const hasValidRange = rawPositionYMin < rawPositionYMax;
+  const capPositionYMin = hasValidRange ? rawPositionYMin : -1;
+  const capPositionYMax = hasValidRange ? rawPositionYMax : 2;
 
   // Color state for 3D viewer
   const [customColor, setCustomColor] = useState('#ffffff');
@@ -177,8 +178,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [capColor, setCapColor] = useState('#ffffff');
   const [isCustomCapColor, setIsCustomCapColor] = useState(true);
 
-  // Cap scale & position sliders for mix-and-match
-  const [capScale, setCapScale] = useState(1);
+  // Cap vertical position slider for mix-and-match (bounded by admin-configured range)
   const [capPositionY, setCapPositionY] = useState(0);
 
   const isBottle = product.type.name_en.toLowerCase() === 'bottle';
@@ -309,14 +309,13 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                     />
                   </Viewer3DErrorBoundary>
 
-                  {/* ── Scale & position sliders (shown when a cap is selected) ── */}
+                  {/* ── Position slider (shown when a cap is selected) ── */}
                   {selectedCompatItem && (
                     <div className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
                       <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                         {lang === 'id' ? 'Sesuaikan Tutup' : 'Adjust Cap'}
                       </p>
                       {[
-                        { label: lang === 'id' ? 'Skala Tutup' : 'Cap Scale', value: capScale, setter: setCapScale, min: 0.1, max: 3, step: 0.05 },
                         { label: lang === 'id' ? 'Posisi Tutup' : 'Cap Position', value: capPositionY, setter: setCapPositionY, min: capPositionYMin, max: capPositionYMax, step: 0.05 },
                       ].map(s => (
                         <div key={s.label}>
