@@ -33,6 +33,12 @@ export const dictionaries = {
         { badge: 'Eco-Friendly', title: 'Sustainable Series' },
       ],
     },
+    videos: {
+      badge: 'In Motion',
+      title: 'See Our Craft in Action',
+      subtitle: 'Go behind the scenes of our production floor, from raw resin to the finished bottle.',
+      watch_now: 'Watch Now',
+    },
     products: {
       badge: 'Product Categories',
       title: 'Packaging Solutions for Every Industry',
@@ -293,7 +299,7 @@ export const dictionaries = {
       address: 'Jakarta, Indonesia',
       phone: '+62 21 1234 5678',
       email: 'info@olewgroup.com',
-      copyright: '© 2024 Olew Group. All rights reserved.',
+      copyright: '© 2024 PT. Olew Plasindo Jaya. All rights reserved.',
       newsletter_desc: 'Stay updated with our latest products and innovations.',
       email_placeholder: 'Your email',
     },
@@ -331,6 +337,12 @@ export const dictionaries = {
         { badge: 'Premium', title: 'Lini Atomizer Parfum' },
         { badge: 'Ramah Lingkungan', title: 'Seri Berkelanjutan' },
       ],
+    },
+    videos: {
+      badge: 'Sorotan Video',
+      title: 'Lihat Proses Produksi Kami',
+      subtitle: 'Intip langsung dapur produksi kami, mulai dari bahan baku resin hingga botol jadi.',
+      watch_now: 'Tonton Sekarang',
     },
     products: {
       badge: 'Kategori Produk',
@@ -592,7 +604,7 @@ export const dictionaries = {
       address: 'Jakarta, Indonesia',
       phone: '+62 21 1234 5678',
       email: 'info@olewgroup.com',
-      copyright: '© 2024 Olew Group. Semua hak dilindungi.',
+      copyright: '© 2024 PT. Olew Plasindo Jaya. Semua hak dilindungi.',
       newsletter_desc: 'Tetap update dengan produk terbaru dan inovasi kami.',
       email_placeholder: 'Email Anda',
     },

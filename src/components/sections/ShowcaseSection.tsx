@@ -65,7 +65,8 @@ export default function ShowcaseSection() {
     getGallery().then(setGallery);
   }, []);
 
-  const items = buildItems(gallery, lang, dict.showcase.items);
+  const imageGallery = gallery.filter((g) => g.image_url);
+  const items = buildItems(imageGallery, lang, dict.showcase.items);
 
   return (
     <section className="relative py-20 md:py-32 overflow-hidden bg-gray-50 dark:bg-gray-950">

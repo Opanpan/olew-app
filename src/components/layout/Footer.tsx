@@ -22,9 +22,10 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <Image src="/images/logos/olew-logo.png" alt="Olew Group" width={40} height={40} className="w-10 h-10" />
+              <Image src="/images/logos/olew-logo.png" alt="Olew Group" width={40} height={40} className="w-10 h-10 shrink-0" />
               <div>
                 <h3 className="font-display text-lg font-bold">Olew Group</h3>
+                <p className="text-xs text-gray-400 tracking-wider uppercase whitespace-nowrap">PT. Olew Plasindo Jaya</p>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-4">

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
@@ -9,8 +10,16 @@ export default function CTASection() {
 
   return (
     <section id="contact" className="section-padding overflow-hidden">
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-sky-500 mx-4 md:mx-8">
+      <div className="relative rounded-3xl overflow-hidden bg-primary-600 mx-4 md:mx-8">
         {/* Background */}
+        <Image
+          src="/images/banners/cta-bg.png"
+          alt=""
+          fill
+          className="object-cover"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-900/50 via-primary-900/10 to-primary-900/20" />
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />

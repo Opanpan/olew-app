@@ -63,8 +63,8 @@ export default function Navigation() {
               <h1 className="font-display text-xl font-bold text-gray-900 dark:text-white">
                 Olew Group
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 tracking-wider uppercase">
-                Premium Packaging
+              <p className="text-xs text-gray-500 dark:text-gray-400 tracking-wider uppercase whitespace-nowrap">
+                PT. Olew Plasindo Jaya
               </p>
             </div>
           </Link>
