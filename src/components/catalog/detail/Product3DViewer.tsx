@@ -43,6 +43,8 @@ interface Product3DViewerProps {
   productColorConfig?: ColorConfig;
   capColorConfig?: ColorConfig;
   compact?: boolean;
+  /** Controlled by the parent so an externally-rendered color picker can suspend orbit drag. */
+  orbitEnabled?: boolean;
 }
 
 // ─── 3D Models ───────────────────────────────────────────────────────────────
@@ -330,7 +332,7 @@ function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPor
 
 // ─── Color Swatch Panel (overlay inside viewer) ───────────────────────────────
 
-function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig; onOpenChange?: (open: boolean) => void }) {
+export function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig; onOpenChange?: (open: boolean) => void }) {
   const [showPicker, setShowPicker] = useState(false);
   const snapshot = useRef<{ selectedColor: string; customColor: string; isCustom: boolean } | null>(null);
 
@@ -444,18 +446,14 @@ export default function Product3DViewer({
   capPositionY = 0,
   capPositionX = 0,
   capPositionZ = 0,
-  productColorConfig,
-  capColorConfig,
   compact = false,
+  orbitEnabled = true,
 }: Product3DViewerProps) {
   const { dict } = useLang();
   const [resetKey, setResetKey] = useState(0);
-  const [anyPickerOpen, setAnyPickerOpen] = useState(false);
   const recoveryAttempts = useRef(0);
   // Dynamically computed from BottleModel bounding box — ensures CapModel sits on top
   const [computedBottleHeight, setComputedBottleHeight] = useState(1);
-
-  const hasColors = productColorConfig || capColorConfig;
 
   return (
     <div
@@ -477,10 +475,7 @@ export default function Product3DViewer({
 
       {/* Instructions */}
       {!compact && (
-        <div className={cn(
-          'absolute left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm transition-all',
-          hasColors ? 'bottom-[100px]' : 'bottom-4'
-        )}>
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm transition-all">
           <p className="text-xs text-white font-medium whitespace-nowrap">
             {dict.catalog.product_detail.drag_to_rotate}
           </p>
@@ -538,7 +533,7 @@ export default function Product3DViewer({
           <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={3} blur={2} far={2} />
           <OrbitControls
             makeDefault
-            enabled={!anyPickerOpen}
+            enabled={orbitEnabled}
             enablePan={false}
             enableZoom={true}
             enableRotate={true}
@@ -557,19 +552,6 @@ export default function Product3DViewer({
       <Suspense fallback={<LoadingSpinner />}>
         <div className="sr-only">3D model loaded</div>
       </Suspense>
-
-      {/* Color Picker Overlay — swatches pinned to bottom of viewer */}
-      {hasColors && (
-        <div className="absolute bottom-4 left-3 right-3 z-20">
-          <div className={cn(
-            'flex gap-2',
-            productColorConfig && capColorConfig ? 'justify-between' : 'justify-start'
-          )}>
-            {productColorConfig && <ColorSwatchPanel config={productColorConfig} onOpenChange={setAnyPickerOpen} />}
-            {capColorConfig && <ColorSwatchPanel config={capColorConfig} onOpenChange={setAnyPickerOpen} />}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

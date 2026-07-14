@@ -17,6 +17,7 @@ import ProductGallery from './ProductGallery';
 import Breadcrumb from '../Breadcrumb';
 import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
 import ApiProductCard from '../ApiProductCard';
+import { PLASTIC_COLORS, colorToHex } from './EnhancedColorPicker';
 import { cn } from '@/lib/utils';
 
 function Viewer3DLoading() {
@@ -35,6 +36,14 @@ const Product3DViewer = dynamic(() => import('./Product3DViewer'), {
   ssr: false,
   loading: () => <Viewer3DLoading />,
 });
+
+// Rendered outside the canvas now, but kept in the same dynamically-imported,
+// SSR-disabled module as Product3DViewer since that file has browser-only
+// top-level side effects (useGLTF.preload).
+const ColorSwatchPanel = dynamic(
+  () => import('./Product3DViewer').then((mod) => mod.ColorSwatchPanel),
+  { ssr: false }
+);
 
 // Resolve a 3D model URL — fall back to a local dummy GLB when the API returns
 // a mock/placeholder URL (cdn.example.com) or an empty value, so the model still renders.
@@ -175,8 +184,21 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // Color state for 3D viewer
   const [customColor, setCustomColor] = useState('#ffffff');
   const [isCustomColor, setIsCustomColor] = useState(true);
+  const [selectedColorName, setSelectedColorName] = useState('');
   const [capColor, setCapColor] = useState('#ffffff');
   const [isCustomCapColor, setIsCustomCapColor] = useState(true);
+  const [selectedCapColorName, setSelectedCapColorName] = useState('');
+  // Suspends orbit drag while a color picker (now rendered below the canvas) is open
+  const [anyPickerOpen, setAnyPickerOpen] = useState(false);
+
+  const handleColorPresetSelect = (name: string) => {
+    setSelectedColorName(name);
+    setCustomColor(colorToHex[name] ?? '#ffffff');
+  };
+  const handleCapColorPresetSelect = (name: string) => {
+    setSelectedCapColorName(name);
+    setCapColor(colorToHex[name] ?? '#ffffff');
+  };
 
   // Cap vertical position slider for mix-and-match (bounded by admin-configured range)
   const [capPositionY, setCapPositionY] = useState(0);
@@ -286,28 +308,41 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       capPositionY={capPositionY}
                       capPositionX={capOffsetX}
                       capPositionZ={capOffsetZ}
-                      productColorConfig={{
-                        colors: [],
-                        selectedColor: '',
-                        onColorChange: () => undefined,
+                      orbitEnabled={!anyPickerOpen}
+                    />
+                  </Viewer3DErrorBoundary>
+
+                  {/* ── Color pickers — kept below the canvas so it doesn't crowd the 3D view ── */}
+                  <div className={cn('flex gap-2', selectedCompatItem ? 'justify-between' : 'justify-start')}>
+                    <ColorSwatchPanel
+                      config={{
+                        colors: PLASTIC_COLORS,
+                        selectedColor: selectedColorName,
+                        onColorChange: handleColorPresetSelect,
                         customColor,
                         onCustomColorChange: setCustomColor,
                         isCustom: isCustomColor,
                         onIsCustomChange: setIsCustomColor,
                         label: d.product_color,
                       }}
-                      capColorConfig={selectedCompatItem ? {
-                        colors: [],
-                        selectedColor: '',
-                        onColorChange: () => undefined,
-                        customColor: capColor,
-                        onCustomColorChange: setCapColor,
-                        isCustom: isCustomCapColor,
-                        onIsCustomChange: setIsCustomCapColor,
-                        label: d.cap_color,
-                      } : undefined}
+                      onOpenChange={setAnyPickerOpen}
                     />
-                  </Viewer3DErrorBoundary>
+                    {selectedCompatItem && (
+                      <ColorSwatchPanel
+                        config={{
+                          colors: PLASTIC_COLORS,
+                          selectedColor: selectedCapColorName,
+                          onColorChange: handleCapColorPresetSelect,
+                          customColor: capColor,
+                          onCustomColorChange: setCapColor,
+                          isCustom: isCustomCapColor,
+                          onIsCustomChange: setIsCustomCapColor,
+                          label: d.cap_color,
+                        }}
+                        onOpenChange={setAnyPickerOpen}
+                      />
+                    )}
+                  </div>
 
                   {/* ── Position slider (shown when a cap is selected) ── */}
                   {selectedCompatItem && (

@@ -18,15 +18,17 @@ interface EnhancedColorPickerProps {
   showCustomPicker?: boolean;
 }
 
-// Map color names to actual hex values for 3D rendering
+// Map color names to actual hex values for 3D rendering.
+// Plastic entries (Clear/Amber/Cobalt Blue/etc.) are tuned to match real
+// injection-molded PET/HDPE resin tones rather than flat Tailwind swatches.
 export const colorToHex: Record<string, string> = {
-  'Amber': '#d97706',
+  'Amber': '#92400e',
   'Clear': '#f3f4f6',
-  'Cobalt Blue': '#2563eb',
-  'Green': '#16a34a',
+  'Cobalt Blue': '#1d4ed8',
+  'Green': '#15803d',
   'Frosted Clear': '#e5e7eb',
   'White': '#ffffff',
-  'Black': '#000000',
+  'Black': '#18181b',
   'Gold': '#eab308',
   'Silver': '#9ca3af',
   'Rose Gold': '#f472b6',
@@ -37,22 +39,28 @@ export const colorToHex: Record<string, string> = {
   'Transparent': '#f9fafb',
   'Frosted': '#f3f4f6',
   'Blue': '#3b82f6',
-  'Natural': '#fde68a',
+  'Natural': '#f0ead6',
   'Brushed Gold': '#ca8a04',
   'Black Chrome': '#374151',
   '24K Gold': '#facc15',
   'Platinum': '#d1d5db',
 };
 
+// Default preset swatches for plastic bottle/cap components — the realistic
+// resin colors used across this catalog's product data (src/data/products.ts).
+export const PLASTIC_COLORS: string[] = [
+  'Clear', 'Frosted Clear', 'White', 'Black', 'Amber', 'Cobalt Blue', 'Blue', 'Green',
+];
+
 // Tailwind classes for UI display
 export const colorClassMap: Record<string, string> = {
-  'Amber': 'bg-amber-600',
+  'Amber': 'bg-amber-800',
   'Clear': 'bg-gray-100 border-2 border-gray-300',
-  'Cobalt Blue': 'bg-blue-600',
-  'Green': 'bg-green-600',
+  'Cobalt Blue': 'bg-blue-700',
+  'Green': 'bg-green-700',
   'Frosted Clear': 'bg-gray-200 border-2 border-gray-400',
   'White': 'bg-white border-2 border-gray-300',
-  'Black': 'bg-black',
+  'Black': 'bg-zinc-900',
   'Gold': 'bg-gradient-to-br from-yellow-400 to-yellow-600',
   'Silver': 'bg-gradient-to-br from-gray-300 to-gray-500',
   'Rose Gold': 'bg-gradient-to-br from-pink-300 to-yellow-500',
@@ -63,7 +71,7 @@ export const colorClassMap: Record<string, string> = {
   'Transparent': 'bg-gray-50 border-2 border-gray-300',
   'Frosted': 'bg-gray-100 border-2 border-gray-300',
   'Blue': 'bg-blue-500',
-  'Natural': 'bg-amber-200 border-2 border-amber-300',
+  'Natural': 'bg-stone-100 border-2 border-stone-300',
   'Brushed Gold': 'bg-gradient-to-br from-yellow-600 to-yellow-400',
   'Black Chrome': 'bg-gradient-to-br from-gray-900 to-gray-600',
   '24K Gold': 'bg-gradient-to-br from-yellow-500 to-yellow-700',
