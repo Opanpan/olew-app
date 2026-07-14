@@ -28,7 +28,7 @@ export default function ApiProductCard({ product, lang, index = 0 }: ApiProductC
   const isComparing = has(product.id);
 
   const { liked, toggle: toggleLike } = useLike(product.id);
-  const { share, copied } = useShare(name);
+  const { share, copied } = useShare(product.id, name);
   const c = dict.catalog.product_card;
 
   const handleCompareToggle = (e: React.MouseEvent) => {

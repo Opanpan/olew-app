@@ -210,8 +210,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const pc = dict.catalog.product_card;
 
   // Like, share & compare — must be after productName is defined
-  const { liked, toggle: toggleLike } = useLike(product.id);
-  const { share, copied } = useShare(productName);
+  const { liked, likeCount, toggle: toggleLike } = useLike(product.id, product.like_count);
+  const { share, copied } = useShare(product.id, productName);
   const { toggle: toggleCompare, has: hasCompare, canAdd } = useCompare();
   const isComparing = hasCompare(product.id);
   const [showMaxMsg, setShowMaxMsg] = useState(false);
@@ -440,6 +440,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                   >
                     <Heart className={cn('w-4 h-4 transition-all', liked && 'fill-red-500')} />
                     <span className="hidden sm:inline">{liked ? pc.liked : pc.like}</span>
+                    {likeCount > 0 && <span className="text-xs font-mono opacity-70">{likeCount}</span>}
                   </motion.button>
 
                   {/* Share */}

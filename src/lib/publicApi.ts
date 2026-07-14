@@ -180,6 +180,8 @@ export interface ProductDetail {
   category: ProductCategoryBasic;
   shopee_url?: string;
   tokopedia_url?: string;
+  like_count?: number;
+  share_count?: number;
 }
 
 export interface CompatibleProduct {
@@ -285,6 +287,70 @@ export async function getProductCompatibilities(id: string): Promise<ProductComp
     return (json?.data?.data as ProductCompatibility) ?? null;
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    return null;
+  }
+}
+
+export interface ProductEngagement {
+  product_id: string;
+  liked: boolean;
+  like_count: number;
+  share_count: number;
+}
+
+export type SharePlatform = 'whatsapp' | 'facebook' | 'twitter' | 'telegram' | 'copy' | 'other';
+
+// Idempotent — backend de-dupes by X-Visitor-Id, so calling this when already
+// liked (e.g. local/server state drifted) is safe and won't inflate the count.
+export async function likeProduct(id: string, visitorId: string): Promise<ProductEngagement | null> {
+  const url = `${BASE_URL}/api/v1/public/products/${id}/like`;
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'X-Visitor-Id': visitorId } });
+    const json = await res.json();
+    devLog(url, res.status, { id, visitorId }, json);
+    if (!res.ok) return null;
+    return (json?.data as ProductEngagement) ?? null;
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m POST ${url} —`, err);
+    return null;
+  }
+}
+
+export async function unlikeProduct(id: string, visitorId: string): Promise<ProductEngagement | null> {
+  const url = `${BASE_URL}/api/v1/public/products/${id}/like`;
+  try {
+    const res = await fetch(url, { method: 'DELETE', headers: { 'X-Visitor-Id': visitorId } });
+    const json = await res.json();
+    devLog(url, res.status, { id, visitorId }, json);
+    if (!res.ok) return null;
+    return (json?.data as ProductEngagement) ?? null;
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m DELETE ${url} —`, err);
+    return null;
+  }
+}
+
+export async function shareProduct(
+  id: string,
+  visitorId?: string,
+  platform?: SharePlatform
+): Promise<ProductEngagement | null> {
+  const url = `${BASE_URL}/api/v1/public/products/${id}/share`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(visitorId ? { 'X-Visitor-Id': visitorId } : {}),
+      },
+      body: JSON.stringify(platform ? { platform } : {}),
+    });
+    const json = await res.json();
+    devLog(url, res.status, { id, visitorId, platform }, json);
+    if (!res.ok) return null;
+    return (json?.data as ProductEngagement) ?? null;
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m POST ${url} —`, err);
     return null;
   }
 }
