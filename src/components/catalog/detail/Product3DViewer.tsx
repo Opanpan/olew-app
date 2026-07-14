@@ -38,6 +38,8 @@ interface Product3DViewerProps {
   bottleScale?: number;
   capScale?: number;
   capPositionY?: number;
+  capPositionX?: number;
+  capPositionZ?: number;
   productColorConfig?: ColorConfig;
   capColorConfig?: ColorConfig;
   compact?: boolean;
@@ -94,8 +96,8 @@ function BottleModel({ url, color, scale = 1, onHeightReady }: {
   return <primitive object={scene} scale={scale} />;
 }
 
-function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0 }: {
-  url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number;
+function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0, positionX = 0, positionZ = 0 }: {
+  url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number; positionX?: number; positionZ?: number;
 }) {
   const { scene: gltfScene } = useGLTF(url);
   const scene = useMemo(() => {
@@ -114,7 +116,7 @@ function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0 }: {
     }
   });
   return (
-    <group position={[0, bottleHeight + positionY, 0]}>
+    <group position={[positionX, bottleHeight + positionY, positionZ]}>
       <primitive object={scene} scale={scale} />
     </group>
   );
@@ -440,6 +442,8 @@ export default function Product3DViewer({
   bottleScale = 1,
   capScale = 1,
   capPositionY = 0,
+  capPositionX = 0,
+  capPositionZ = 0,
   productColorConfig,
   capColorConfig,
   compact = false,
@@ -525,6 +529,8 @@ export default function Product3DViewer({
                   bottleHeight={computedBottleHeight}
                   scale={capScale}
                   positionY={capPositionY}
+                  positionX={capPositionX}
+                  positionZ={capPositionZ}
                 />
               </Suspense>
             )}

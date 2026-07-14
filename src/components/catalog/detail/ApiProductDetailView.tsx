@@ -150,15 +150,26 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
       setCapPositionY(0);
       return;
     }
+    // Seed scale/position from the admin-configured default for this cap, so the
+    // viewer opens already fitted rather than always starting at scale 1 / position 0.
+    const item = compatibility?.compatible.find(c => c.id === id);
     setSelectedCompatId(id);
     setCompatLoading(true);
     setCompatPreview(null);
-    setCapScale(1);
+    setCapScale(item?.scale ?? 1);
     setCapPositionY(0);
     const detail = await getProductDetail(id);
     setCompatPreview(detail);
     setCompatLoading(false);
   };
+
+  // Horizontal cap alignment is an admin-configured correction for this specific
+  // model pairing (not a customer preference), so it's applied as a fixed offset
+  // rather than exposed as a slider.
+  const capOffsetX = selectedCompatItem?.position?.x ?? 0;
+  const capOffsetZ = selectedCompatItem?.position?.z ?? 0;
+  const capPositionYMin = selectedCompatItem?.min_position_vertical ?? -1;
+  const capPositionYMax = selectedCompatItem?.max_position_vertical ?? 2;
 
   // Color state for 3D viewer
   const [customColor, setCustomColor] = useState('#ffffff');
@@ -273,6 +284,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       bottleScale={1}
                       capScale={capScale}
                       capPositionY={capPositionY}
+                      capPositionX={capOffsetX}
+                      capPositionZ={capOffsetZ}
                       productColorConfig={{
                         colors: [],
                         selectedColor: '',
@@ -304,7 +317,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       </p>
                       {[
                         { label: lang === 'id' ? 'Skala Tutup' : 'Cap Scale', value: capScale, setter: setCapScale, min: 0.1, max: 3, step: 0.05 },
-                        { label: lang === 'id' ? 'Posisi Tutup' : 'Cap Position', value: capPositionY, setter: setCapPositionY, min: -1, max: 2, step: 0.05 },
+                        { label: lang === 'id' ? 'Posisi Tutup' : 'Cap Position', value: capPositionY, setter: setCapPositionY, min: capPositionYMin, max: capPositionYMax, step: 0.05 },
                       ].map(s => (
                         <div key={s.label}>
                           <div className="flex items-center justify-between mb-1.5">

@@ -190,6 +190,8 @@ export interface CompatibleProduct {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
   scale: number;
+  min_position_vertical?: number | null;
+  max_position_vertical?: number | null;
 }
 
 export interface ProductCompatibility {
