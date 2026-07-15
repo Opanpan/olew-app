@@ -48,13 +48,20 @@ export default function Navigation() {
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+        'fixed top-0 left-0 right-0 z-50 overflow-hidden transition-all duration-500',
         isScrolled
           ? 'py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-lg'
           : 'py-5 bg-transparent'
       )}
     >
-      <nav className="container-custom mx-auto px-4 md:px-8">
+      <Image
+        src="/images/banners/header-bg.png"
+        alt=""
+        fill
+        priority
+        className="object-cover object-[center_60%] dark:hidden pointer-events-none"
+      />
+      <nav className="relative container-custom mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href={`/${lang}`} className="flex items-center gap-3">

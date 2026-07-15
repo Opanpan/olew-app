@@ -16,8 +16,16 @@ export default function Footer() {
   const { lang, dict } = useLang();
 
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="container-custom mx-auto px-4 md:px-8 pt-16 pb-8">
+    <footer className="relative bg-gray-900 text-white overflow-hidden">
+      <Image
+        src="/images/banners/footer-bg.png"
+        alt=""
+        fill
+        className="object-cover"
+        sizes="100vw"
+      />
+      <div className="absolute inset-0 bg-gray-950/40" />
+      <div className="relative container-custom mx-auto px-4 md:px-8 pt-16 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div>
