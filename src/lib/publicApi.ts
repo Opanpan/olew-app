@@ -194,6 +194,8 @@ export interface CompatibleProduct {
   scale: number;
   min_position_vertical?: number | null;
   max_position_vertical?: number | null;
+  /** Mix-and-match slot this item occupies (e.g. "cap", "outer_pot", "inner_pot"). Null/absent = legacy, treated as "cap". */
+  role?: string | null;
 }
 
 export interface ProductCompatibility {

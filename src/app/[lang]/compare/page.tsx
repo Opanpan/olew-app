@@ -239,8 +239,6 @@ function CompareContent() {
                       <Product3DViewer
                         bottleModelUrl={product.three_d_file_path}
                         bottleColor="#22c55e"
-                        capColor="#000000"
-                        productCategory={product.type.name_en.toLowerCase() === 'bottle' ? 'bottle' : 'cap'}
                         compact
                       />
                     ) : product.images[0] ? (

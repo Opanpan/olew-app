@@ -189,33 +189,15 @@ export default function ProductDetailView({ product, allProducts, images = [] }:
                 <motion.div key="viewer3d" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
                   <Product3DViewer
                     bottleModelUrl="/images/3d/base.glb"
-                    capModelUrl={selectedCap ? "/images/3d/cap.glb" : undefined}
                     bottleColor={getHexColor(selectedColor, customColor, isCustomBottleColor)}
-                    capColor={selectedCap ? getHexColor(capColor, customCapColor, isCustomCapColor) : '#000000'}
-                    productCategory={product.category}
                     bottleScale={bottleScale}
-                    capScale={capScale}
-                    capPositionY={capPositionY}
-                    productColorConfig={{
-                      colors: product.colors,
-                      selectedColor,
-                      onColorChange: setSelectedColor,
-                      customColor,
-                      onCustomColorChange: setCustomColor,
-                      isCustom: isCustomBottleColor,
-                      onIsCustomChange: setIsCustomBottleColor,
-                      label: d.product_color,
-                    }}
-                    capColorConfig={selectedCap ? {
-                      colors: selectedCap.colors,
-                      selectedColor: capColor,
-                      onColorChange: setCapColor,
-                      customColor: customCapColor,
-                      onCustomColorChange: setCustomCapColor,
-                      isCustom: isCustomCapColor,
-                      onIsCustomChange: setIsCustomCapColor,
-                      label: d.cap_color,
-                    } : undefined}
+                    layers={selectedCap ? [{
+                      key: 'cap',
+                      url: '/images/3d/cap.glb',
+                      color: getHexColor(capColor, customCapColor, isCustomCapColor),
+                      scale: capScale,
+                      positionY: capPositionY,
+                    }] : []}
                   />
 
                   {/* Scale controls */}

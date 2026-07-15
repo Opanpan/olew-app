@@ -29,19 +29,24 @@ export interface ColorConfig {
   label: string;
 }
 
+// A single attached part (cap, outer pot, inner pot, ...) stacked on top of the
+// base model. Every layer anchors off the same base bottleHeight independently
+// (parallel stacking) — none of them stack on top of each other.
+export interface LayerConfig {
+  key: string;
+  url?: string;
+  color: string;
+  scale?: number;
+  positionY?: number;
+  positionX?: number;
+  positionZ?: number;
+}
+
 interface Product3DViewerProps {
   bottleModelUrl?: string;
-  capModelUrl?: string;
   bottleColor: string;
-  capColor: string;
-  productCategory: 'bottle' | 'cap';
   bottleScale?: number;
-  capScale?: number;
-  capPositionY?: number;
-  capPositionX?: number;
-  capPositionZ?: number;
-  productColorConfig?: ColorConfig;
-  capColorConfig?: ColorConfig;
+  layers?: LayerConfig[];
   compact?: boolean;
   /** Controlled by the parent so an externally-rendered color picker can suspend orbit drag. */
   orbitEnabled?: boolean;
@@ -98,7 +103,7 @@ function BottleModel({ url, color, scale = 1, onHeightReady }: {
   return <primitive object={scene} scale={scale} />;
 }
 
-function CapModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0, positionX = 0, positionZ = 0 }: {
+function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0, positionX = 0, positionZ = 0 }: {
   url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number; positionX?: number; positionZ?: number;
 }) {
   const { scene: gltfScene } = useGLTF(url);
@@ -437,15 +442,9 @@ export function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig
 
 export default function Product3DViewer({
   bottleModelUrl = '/images/3d/base.glb',
-  capModelUrl,
   bottleColor,
-  capColor,
-  productCategory,
   bottleScale = 1,
-  capScale = 1,
-  capPositionY = 0,
-  capPositionX = 0,
-  capPositionZ = 0,
+  layers = [],
   compact = false,
   orbitEnabled = true,
 }: Product3DViewerProps) {
@@ -516,19 +515,19 @@ export default function Product3DViewer({
                 onHeightReady={setComputedBottleHeight}
               />
             </Suspense>
-            {productCategory === 'bottle' && capModelUrl && (
-              <Suspense key={capModelUrl} fallback={<PlaceholderModel color={capColor} type="cap" />}>
-                <CapModel
-                  url={capModelUrl}
-                  color={capColor}
+            {layers.map((layer) => layer.url && (
+              <Suspense key={layer.key + layer.url} fallback={<PlaceholderModel color={layer.color} type="cap" />}>
+                <AttachedLayerModel
+                  url={layer.url}
+                  color={layer.color}
                   bottleHeight={computedBottleHeight}
-                  scale={capScale}
-                  positionY={capPositionY}
-                  positionX={capPositionX}
-                  positionZ={capPositionZ}
+                  scale={layer.scale}
+                  positionY={layer.positionY}
+                  positionX={layer.positionX}
+                  positionZ={layer.positionZ}
                 />
               </Suspense>
-            )}
+            ))}
           </>
           <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={3} blur={2} far={2} />
           <OrbitControls

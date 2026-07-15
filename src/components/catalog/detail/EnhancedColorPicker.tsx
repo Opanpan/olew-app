@@ -46,11 +46,8 @@ export const colorToHex: Record<string, string> = {
   'Platinum': '#d1d5db',
 };
 
-// Default preset swatches for plastic bottle/cap components — the realistic
-// resin colors used across this catalog's product data (src/data/products.ts).
-export const PLASTIC_COLORS: string[] = [
-  'Clear', 'Frosted Clear', 'White', 'Black', 'Amber', 'Cobalt Blue', 'Blue', 'Green',
-];
+// Preset swatches shown for bottle/cap/pot 3D color pickers.
+export const PRODUCT_COLORS: string[] = ['Clear', 'White'];
 
 // Tailwind classes for UI display
 export const colorClassMap: Record<string, string> = {
