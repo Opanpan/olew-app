@@ -376,6 +376,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     setSelectedCompatId(prev => ({ ...prev, [role]: id }));
     setCompatLoading(prev => ({ ...prev, [role]: true }));
     setCompatPreview(prev => ({ ...prev, [role]: null }));
+    // capPositionY is an OFFSET from the admin-configured midpoint, not an
+    // absolute position — 0 here means "no offset", i.e. exactly the position
+    // shown in the admin's own "Combined preview" (see layers construction
+    // below, which adds this offset back on top of the midpoint).
     setCapPositionY(prev => ({ ...prev, [role]: 0 }));
     const detail = await getProductDetail(id);
     setCompatPreview(prev => ({ ...prev, [role]: detail }));
@@ -531,12 +535,13 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                         if (!item) return [];
                         const preview = compatPreview[role];
                         const bounds = layerBoundsByRole[role];
+                        const mid = (bounds.min + bounds.max) / 2;
                         return [{
                           key: role,
                           url: validGlbUrl(preview?.three_d_file_path || item.three_d_file_path),
                           color: capColor[role],
                           scale: bounds.scale,
-                          positionY: capPositionY[role],
+                          positionY: mid + capPositionY[role],
                           positionX: bounds.offsetX,
                           positionZ: bounds.offsetZ,
                         }];
@@ -581,6 +586,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                   {/* ── Position sliders (one per active role) ── */}
                   {COMPAT_ROLES.filter((role) => selectedCompatItems[role]).map((role) => {
                     const bounds = layerBoundsByRole[role];
+                    // Distance from the admin's midpoint (0) up to their configured max —
+                    // the slider only goes 0 → up, so the customer can raise the part but
+                    // never lower it below the admin's reference/preview position.
+                    const half = (bounds.max - bounds.min) / 2;
                     return (
                       <div key={role} className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
                         <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
@@ -597,8 +606,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                           </div>
                           <input
                             type="range"
-                            min={bounds.min}
-                            max={bounds.max}
+                            min={0}
+                            max={half}
                             step={0.05}
                             value={capPositionY[role]}
                             onChange={(e) => setCapPositionY((prev) => ({ ...prev, [role]: parseFloat(e.target.value) }))}
