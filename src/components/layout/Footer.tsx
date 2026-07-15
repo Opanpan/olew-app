@@ -97,7 +97,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-6 text-center text-gray-500 text-sm">
-          {dict.footer.copyright}
+          {dict.footer.copyright.replace('{year}', String(new Date().getFullYear()))}
         </div>
       </div>
     </footer>

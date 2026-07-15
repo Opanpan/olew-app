@@ -104,15 +104,24 @@ export default function CatalogClient({
 
   // Client-side attribute filtering — now uses real attribute values from the API list response
   const filtered = products.filter(p => {
-    const entries = Object.entries(activeAttrs).filter(([, v]) => v.length > 0);
-    if (!entries.length) return true;
-    return entries.every(([key, vals]) => {
+    const attrEntries = Object.entries(activeAttrs).filter(([, v]) => v.length > 0);
+    const passesAttrs = attrEntries.every(([key, vals]) => {
       const attrValue = p.attributes?.[key]?.value;
       // If the product has no data for this attribute key, exclude it only when
       // strict filtering is desired; here we keep products missing the attribute
       // so users don't get an empty list when attributes aren't fully populated yet.
       if (!attrValue) return true;
       return vals.includes(attrValue);
+    });
+    if (!passesAttrs) return false;
+
+    const rangeEntries = Object.entries(activeRanges);
+    return rangeEntries.every(([key, [lo, hi]]) => {
+      const rawValue = p.attributes?.[key]?.value;
+      const num = rawValue ? parseFloat(rawValue) : NaN;
+      // Same "keep if missing/unparseable" behavior as the categorical filters above.
+      if (Number.isNaN(num)) return true;
+      return num >= lo && num <= hi;
     });
   });
 

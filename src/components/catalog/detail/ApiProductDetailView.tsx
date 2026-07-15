@@ -67,12 +67,13 @@ function classifyByTypeName(typeName: string | undefined): CompatRole {
   return 'cap';
 }
 
-// Resolve a 3D model URL — fall back to a local dummy GLB when the API returns
-// a mock/placeholder URL (cdn.example.com) or an empty value, so the model still renders.
-function resolve3DUrl(url: string | undefined, fallback: string): string {
-  if (!url) return fallback;
-  if (url.includes('cdn.example.com')) return fallback;
-  if (!/\.glb($|\?)/i.test(url)) return fallback;
+// Treat a mock/placeholder URL (cdn.example.com) or anything that isn't a real
+// .glb as "no model" — the viewer shows an unavailable/loading state instead of
+// trying to load it, rather than silently substituting a generic stand-in model.
+function validGlbUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.includes('cdn.example.com')) return undefined;
+  if (!/\.glb($|\?)/i.test(url)) return undefined;
   return url;
 }
 
@@ -522,7 +523,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                   {/* ── Single canvas: base product + all active layers together ── */}
                   <Viewer3DErrorBoundary>
                     <Product3DViewer
-                      bottleModelUrl={product.three_d_file_path || '/images/3d/base.glb'}
+                      bottleModelUrl={validGlbUrl(product.three_d_file_path)}
                       bottleColor={customColor}
                       bottleScale={1}
                       layers={COMPAT_ROLES.flatMap((role) => {
@@ -532,7 +533,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                         const bounds = layerBoundsByRole[role];
                         return [{
                           key: role,
-                          url: preview?.three_d_file_path || item.three_d_file_path || '/images/3d/cap.glb',
+                          url: validGlbUrl(preview?.three_d_file_path || item.three_d_file_path),
                           color: capColor[role],
                           scale: bounds.scale,
                           positionY: capPositionY[role],

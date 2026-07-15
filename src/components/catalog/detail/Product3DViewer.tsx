@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, useGLTF } from '@react-three/drei';
+import { OrbitControls, Environment, useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Loader2, Palette, Check, X, Droplets } from 'lucide-react';
@@ -11,12 +11,6 @@ import { HexColorPicker } from 'react-colorful';
 import { useLang } from '@/lib/LangContext';
 import { cn } from '@/lib/utils';
 import { colorClassMap } from './EnhancedColorPicker';
-
-// Preload local GLBs in the browser so they're ready before the user opens 3D view
-if (typeof window !== 'undefined') {
-  useGLTF.preload('/images/3d/base.glb');
-  useGLTF.preload('/images/3d/cap.glb');
-}
 
 export interface ColorConfig {
   colors: string[];
@@ -43,7 +37,7 @@ export interface LayerConfig {
 }
 
 interface Product3DViewerProps {
-  bottleModelUrl?: string;
+  bottleModelUrl?: string | null;
   bottleColor: string;
   bottleScale?: number;
   layers?: LayerConfig[];
@@ -77,7 +71,7 @@ function BottleModel({ url, color, scale = 1, onHeightReady }: {
     const s = gltfScene.clone(true);
     s.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        child.material = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.1 });
+        child.material = new THREE.MeshStandardMaterial({ roughness: 0.65, metalness: 0, envMapIntensity: 0.3 });
       }
     });
     return s;
@@ -111,7 +105,7 @@ function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY
     const s = gltfScene.clone(true);
     s.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        child.material = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.3 });
+        child.material = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.15, envMapIntensity: 0.3 });
       }
     });
     return s;
@@ -146,14 +140,35 @@ function PlaceholderModel({ color, type }: { color: string; type: 'bottle' | 'ca
   );
 }
 
-function LoadingSpinner() {
+// Real download progress (via three's DefaultLoadingManager, tracked by drei) for
+// whichever GLB(s) are currently in flight — shown while the real model streams in.
+function ModelLoadingOverlay() {
+  const { dict } = useLang();
+  const { active, progress } = useProgress();
+  if (!active) return null;
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl md:rounded-3xl">
+      <div className="w-40 text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400 mx-auto mb-3" />
+        <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-2">
+          <div
+            className="h-full bg-primary-600 dark:bg-primary-400 transition-all duration-150"
+            style={{ width: `${Math.round(progress)}%` }}
+          />
+        </div>
+        <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
+          {dict.catalog.product_detail.loading_3d_model} {Math.round(progress)}%
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ModelUnavailable() {
   const { dict } = useLang();
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-2xl">
-      <div className="text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-primary-600 dark:text-primary-400 mx-auto mb-3" />
-        <p className="text-sm text-gray-600 dark:text-gray-400">{dict.catalog.product_detail.loading_3d_model}</p>
-      </div>
+    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-2xl md:rounded-3xl">
+      <p className="text-xs text-gray-400 dark:text-gray-500">{dict.catalog.product_detail.model_unavailable}</p>
     </div>
   );
 }
@@ -441,7 +456,7 @@ export function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Product3DViewer({
-  bottleModelUrl = '/images/3d/base.glb',
+  bottleModelUrl,
   bottleColor,
   bottleScale = 1,
   layers = [],
@@ -482,78 +497,77 @@ export default function Product3DViewer({
       )}
 
       {/* 3D Canvas */}
-      <Canvas
-        key={resetKey}
-        dpr={[1, 1.5]}
-        camera={{ position: [3, 2, 3], fov: 50 }}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        onCreated={({ gl }) => {
-          const canvas = gl.domElement;
-          // Prevent the browser from permanently dropping the context; recover by remounting,
-          // but cap attempts so a GPU that simply can't handle the model doesn't loop forever.
-          canvas.addEventListener('webglcontextlost', (e) => {
-            e.preventDefault();
-            if (recoveryAttempts.current < 3) {
-              recoveryAttempts.current += 1;
-              setTimeout(() => setResetKey((p) => p + 1), 100);
-            }
-          }, { passive: false });
-        }}
-      >
-        <Suspense fallback={null}>
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
-          <directionalLight position={[-5, 3, -5]} intensity={0.3} />
-          <pointLight position={[0, 3, 0]} intensity={0.3} />
-          <Environment preset="studio" />
-          <>
-            <Suspense key={bottleModelUrl} fallback={<PlaceholderModel color={bottleColor} type="bottle" />}>
-              <BottleModel
-                url={bottleModelUrl}
-                color={bottleColor}
-                scale={bottleScale}
-                onHeightReady={setComputedBottleHeight}
+      {bottleModelUrl ? (
+        <>
+          <Canvas
+            key={resetKey}
+            dpr={[1, 1.5]}
+            camera={{ position: [3, 2, 3], fov: 50 }}
+            gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+            onCreated={({ gl }) => {
+              const canvas = gl.domElement;
+              // Prevent the browser from permanently dropping the context; recover by remounting,
+              // but cap attempts so a GPU that simply can't handle the model doesn't loop forever.
+              canvas.addEventListener('webglcontextlost', (e) => {
+                e.preventDefault();
+                if (recoveryAttempts.current < 3) {
+                  recoveryAttempts.current += 1;
+                  setTimeout(() => setResetKey((p) => p + 1), 100);
+                }
+              }, { passive: false });
+            }}
+          >
+            <Suspense fallback={null}>
+              <ambientLight intensity={1.1} />
+              <directionalLight position={[5, 5, 5]} intensity={0.3} />
+              <directionalLight position={[-5, 3, -5]} intensity={0.3} />
+              <directionalLight position={[0, 5, -5]} intensity={0.25} />
+              <Environment preset="studio" blur={1} />
+              <>
+                <Suspense key={bottleModelUrl} fallback={<PlaceholderModel color={bottleColor} type="bottle" />}>
+                  <BottleModel
+                    url={bottleModelUrl}
+                    color={bottleColor}
+                    scale={bottleScale}
+                    onHeightReady={setComputedBottleHeight}
+                  />
+                </Suspense>
+                {layers.map((layer) => layer.url && (
+                  <Suspense key={layer.key + layer.url} fallback={<PlaceholderModel color={layer.color} type="cap" />}>
+                    <AttachedLayerModel
+                      url={layer.url}
+                      color={layer.color}
+                      bottleHeight={computedBottleHeight}
+                      scale={layer.scale}
+                      positionY={layer.positionY}
+                      positionX={layer.positionX}
+                      positionZ={layer.positionZ}
+                    />
+                  </Suspense>
+                ))}
+              </>
+              <OrbitControls
+                makeDefault
+                enabled={orbitEnabled}
+                enablePan={false}
+                enableZoom={true}
+                enableRotate={true}
+                minDistance={2}
+                maxDistance={6}
+                minPolarAngle={Math.PI / 6}
+                maxPolarAngle={Math.PI / 2}
+                enableDamping={true}
+                dampingFactor={0.05}
+                rotateSpeed={1}
+                target={[0, 0.5, 0]}
               />
             </Suspense>
-            {layers.map((layer) => layer.url && (
-              <Suspense key={layer.key + layer.url} fallback={<PlaceholderModel color={layer.color} type="cap" />}>
-                <AttachedLayerModel
-                  url={layer.url}
-                  color={layer.color}
-                  bottleHeight={computedBottleHeight}
-                  scale={layer.scale}
-                  positionY={layer.positionY}
-                  positionX={layer.positionX}
-                  positionZ={layer.positionZ}
-                />
-              </Suspense>
-            ))}
-          </>
-          <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={3} blur={2} far={2} />
-          <OrbitControls
-            makeDefault
-            enabled={orbitEnabled}
-            enablePan={false}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={2}
-            maxDistance={6}
-            minPolarAngle={Math.PI / 6}
-            maxPolarAngle={Math.PI / 2}
-            enableDamping={true}
-            dampingFactor={0.05}
-            rotateSpeed={1}
-            target={[0, 0.5, 0]}
-          />
-        </Suspense>
-      </Canvas>
-
-      <Suspense fallback={<LoadingSpinner />}>
-        <div className="sr-only">3D model loaded</div>
-      </Suspense>
+          </Canvas>
+          <ModelLoadingOverlay />
+        </>
+      ) : (
+        <ModelUnavailable />
+      )}
     </div>
   );
 }
-
-useGLTF.preload('/images/3d/base.glb');
-useGLTF.preload('/images/3d/cap.glb');

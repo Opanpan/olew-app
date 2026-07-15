@@ -17,17 +17,31 @@ export default function ProductDetailPage() {
   const [notFoundState, setNotFoundState] = useState(false);
 
   useEffect(() => {
+    // Reset immediately so a stale product's page (and its compatibility data)
+    // never lingers on screen while the new one loads.
+    setProduct(null);
+    setCompatibility(null);
+    setLoading(true);
+    setNotFoundState(false);
+
+    let ignore = false;
     Promise.all([
       getProductDetail(id),
       getRelatedProducts(id),
       getProductCompatibilities(id),
     ]).then(([p, r, c]) => {
+      // Guards against a slower, superseded request for a previous id resolving
+      // after the user has already navigated on — without this, its stale
+      // response (e.g. a Bottle's single Cap) can overwrite the current product's
+      // freshly-loaded data, including compatibility (Inner/Outer Pot groups).
+      if (ignore) return;
       if (!p) { setNotFoundState(true); return; }
       setProduct(p);
       setRelated(r);
       setCompatibility(c);
       setLoading(false);
     });
+    return () => { ignore = true; };
   }, [id]);
 
   if (notFoundState) { notFound(); }
