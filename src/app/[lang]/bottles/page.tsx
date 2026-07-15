@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { getDictionary } from '@/lib/dictionary';
 import type { Lang } from '@/lib/dictionary';
-import { getProducts, getProductFiltersData, getAttributeDefinitions } from '@/lib/publicApi';
+import { getProducts, getProductFiltersData, getAttributeDefinitions, type ProductListItem } from '@/lib/publicApi';
+import { categoriesForFamily } from '@/lib/productTaxonomy';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CatalogClient from '@/components/catalog/CatalogClient';
 
@@ -19,21 +20,31 @@ export default async function BottlesPage({ params, searchParams }: BottlesPageP
     getAttributeDefinitions(),
   ]);
 
-  const bottleTypeId = filterData?.types.find(t => t.name_en === 'Bottle')?.id;
+  const bottleCategoryIds = categoriesForFamily(filterData?.categories ?? [], 'bottle').map(c => c.id);
 
   const search = typeof searchParams.search === 'string' ? searchParams.search : '';
   const categoryId = typeof searchParams.category_id === 'string' ? searchParams.category_id : '';
 
-  // When a category_id is active, skip type_id — the API does AND filtering,
-  // and admin-created products may have a real category UUID that doesn't intersect
-  // with the seed type_id, returning 0 results.
-  const result = await getProducts({
-    limit: 100,
-    offset: 0,
-    search: search || undefined,
-    type_id: categoryId ? undefined : bottleTypeId,
-    category_id: categoryId || undefined,
-  });
+  // The API's type_id filter doesn't match admin-created products (only a seed
+  // dataset that no longer exists), so the default view fetches every
+  // Bottle-family category_id in parallel and merges the results instead.
+  let data: ProductListItem[];
+  if (categoryId) {
+    const result = await getProducts({ limit: 100, offset: 0, search: search || undefined, category_id: categoryId });
+    data = result.data;
+  } else {
+    const results = await Promise.all(
+      bottleCategoryIds.map((id) => getProducts({ limit: 100, offset: 0, search: search || undefined, category_id: id }))
+    );
+    const seen = new Set<string>();
+    data = results.flatMap((r) => r.data).filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+  }
+
+  // Scope the sidebar's category filter to Bottle-family categories only, so
+  // Cap and Pot categories don't bleed into this page.
+  const scopedFilterData = filterData
+    ? { ...filterData, categories: categoriesForFamily(filterData.categories, 'bottle') }
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -50,8 +61,8 @@ export default async function BottlesPage({ params, searchParams }: BottlesPageP
         <div className="mx-auto max-w-[1440px]">
           <Suspense>
             <CatalogClient
-              products={result.data}
-              filterData={filterData}
+              products={data}
+              filterData={scopedFilterData}
               attrDefs={attrDefsData?.attributes ?? []}
               lang={lang}
               emptyMessage={dict.catalog.bottles.empty_state}

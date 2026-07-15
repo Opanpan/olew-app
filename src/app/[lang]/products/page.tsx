@@ -20,6 +20,10 @@ export default function ProductsPage({ params, searchParams }: ProductsPageProps
     const dest = sCat ? `/${lang}/caps?category_id=${sCat}` : `/${lang}/caps`;
     redirect(dest);
   }
+  if (cat === 'pot') {
+    const dest = sCat ? `/${lang}/pot?category_id=${sCat}` : `/${lang}/pot`;
+    redirect(dest);
+  }
 
   return <ProductsLanding />;
 }

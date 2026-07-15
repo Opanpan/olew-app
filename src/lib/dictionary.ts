@@ -6,6 +6,7 @@ export const dictionaries = {
       products: 'Products',
       bottles: 'Bottles',
       caps: 'Caps',
+      pot: 'Pot',
       certificates: 'Certificates',
       clients: 'Clients',
       contact: 'Contact',
@@ -98,6 +99,13 @@ export const dictionaries = {
         subtitle: 'Discover our comprehensive selection of functional and aesthetic caps for all your packaging needs.',
         empty_state: 'No caps match your filters. Try adjusting your search criteria.',
         showing_results: 'Showing {count} caps',
+      },
+      pot: {
+        badge: 'Pot Collection',
+        title: 'Premium Pots for Every Need',
+        subtitle: 'Explore our range of inner and outer pots designed for creams, balms, and cosmetic treatments.',
+        empty_state: 'No pots match your filters. Try adjusting your search criteria.',
+        showing_results: 'Showing {count} pots',
       },
       filters: {
         title: 'Filter Products',
@@ -311,6 +319,7 @@ export const dictionaries = {
       products: 'Produk',
       bottles: 'Botol',
       caps: 'Tutup',
+      pot: 'Pot',
       certificates: 'Sertifikat',
       clients: 'Klien',
       contact: 'Kontak',
@@ -403,6 +412,13 @@ export const dictionaries = {
         subtitle: 'Temukan pilihan lengkap tutup fungsional dan estetis untuk semua kebutuhan kemasan Anda.',
         empty_state: 'Tidak ada tutup yang cocok dengan filter Anda. Coba sesuaikan kriteria pencarian.',
         showing_results: 'Menampilkan {count} tutup',
+      },
+      pot: {
+        badge: 'Koleksi Pot',
+        title: 'Pot Premium untuk Setiap Kebutuhan',
+        subtitle: 'Jelajahi rangkaian pot dalam dan pot luar kami yang dirancang untuk krim, balsem, dan perawatan kosmetik.',
+        empty_state: 'Tidak ada pot yang cocok dengan filter Anda. Coba sesuaikan kriteria pencarian.',
+        showing_results: 'Menampilkan {count} pot',
       },
       filters: {
         title: 'Filter Produk',

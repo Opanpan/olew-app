@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useLang } from '@/lib/LangContext';
-import { getProductFiltersData, type ProductFiltersData, type ProductTypeBasic, type ProductCategoryBasic } from '@/lib/publicApi';
+import { getProductFiltersData, type ProductFiltersData, type ProductCategoryBasic } from '@/lib/publicApi';
+import { familyOfCategory, familyToSlug, type ProductFamily } from '@/lib/productTaxonomy';
 
 // ── Category icon mapping ─────────────────────────────────────────────────────
 // Maps category name keywords → a colored SVG illustration + gradient
@@ -35,19 +36,40 @@ function CapIcon({ color }: { color: string }) {
   );
 }
 
+function PotIcon({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 64 56" className="w-10 h-9" fill="none">
+      <ellipse cx="32" cy="10" rx="20" ry="6" fill={color} opacity="0.9" />
+      <path d="M12 10 L15 44 Q16 52 32 52 Q48 52 49 44 L52 10" fill={color} opacity="0.85" />
+      <ellipse cx="32" cy="10" rx="20" ry="6" fill="white" opacity="0.2" />
+      <rect x="20" y="22" width="24" height="16" rx="2" fill="white" opacity="0.2" />
+    </svg>
+  );
+}
+
 const BOTTLE_COLORS = [
   '#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#0ea5e9'
 ];
 const CAP_COLORS = [
   '#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#3b82f6','#10b981'
 ];
+const POT_COLORS = [
+  '#f59e0b','#14b8a6','#8b5cf6','#ec4899','#3b82f6','#10b981','#f97316'
+];
 
-function getCategoryIcon(typeKey: 'bottle' | 'cap', index: number): CategoryIcon {
-  if (typeKey === 'bottle') {
+function getCategoryIcon(family: ProductFamily, index: number): CategoryIcon {
+  if (family === 'bottle') {
     const color = BOTTLE_COLORS[index % BOTTLE_COLORS.length];
     return {
       bg: `${color}15`,
       svg: <BottleIcon color={color} />,
+    };
+  }
+  if (family === 'pot') {
+    const color = POT_COLORS[index % POT_COLORS.length];
+    return {
+      bg: `${color}15`,
+      svg: <PotIcon color={color} />,
     };
   }
   const color = CAP_COLORS[index % CAP_COLORS.length];
@@ -55,22 +77,6 @@ function getCategoryIcon(typeKey: 'bottle' | 'cap', index: number): CategoryIcon
     bg: `${color}15`,
     svg: <CapIcon color={color} />,
   };
-}
-
-// ── Determine which type a category belongs to ─────────────────────────────
-
-function resolveTypeForCategory(
-  category: ProductCategoryBasic,
-  types: ProductTypeBasic[]
-): ProductTypeBasic | null {
-  const name = (category.name_en + ' ' + category.name_id).toLowerCase();
-  if (name.includes('bottle') || name.includes('botol')) {
-    return types.find(t => t.name_en.toLowerCase() === 'bottle') ?? null;
-  }
-  if (name.includes('cap') || name.includes('tutup') || name.includes('closure') || name.includes('lid')) {
-    return types.find(t => t.name_en.toLowerCase() === 'cap') ?? null;
-  }
-  return null;
 }
 
 // ── Category circle ───────────────────────────────────────────────────────────
@@ -83,7 +89,7 @@ function CategoryCircle({
   index,
 }: {
   category: ProductCategoryBasic;
-  typeSlug: 'bottles' | 'caps';
+  typeSlug: 'bottles' | 'caps' | 'pot';
   icon: CategoryIcon;
   lang: string;
   index: number;
@@ -116,18 +122,20 @@ function CategoryCircle({
 // ── Type section ──────────────────────────────────────────────────────────────
 
 function TypeSection({
-  type,
+  family,
+  familyLabel,
   categories,
   lang,
   sectionIndex,
 }: {
-  type: ProductTypeBasic;
+  family: ProductFamily;
+  familyLabel: string;
   categories: ProductCategoryBasic[];
   lang: string;
   sectionIndex: number;
 }) {
-  const typeSlug = type.name_en.toLowerCase() === 'bottle' ? 'bottles' : 'caps';
-  const typeLabel = lang === 'id' ? type.name_id : type.name_en;
+  const typeSlug = familyToSlug(family);
+  const typeLabel = familyLabel;
 
   return (
     <motion.div
@@ -144,7 +152,7 @@ function TypeSection({
       {/* Category circles */}
       <div className="flex flex-wrap gap-6 md:gap-8">
         {categories.map((cat, i) => {
-          const icon = getCategoryIcon(typeSlug === 'bottles' ? 'bottle' : 'cap', i);
+          const icon = getCategoryIcon(family, i);
           return (
             <CategoryCircle
               key={cat.id}
@@ -191,15 +199,19 @@ export default function ProductsLanding() {
     getProductFiltersData().then(setFilterData);
   }, []);
 
-  // Group categories by type using name heuristics
-  const grouped: { type: ProductTypeBasic; categories: ProductCategoryBasic[] }[] = [];
+  // Group categories into the 3 catalog families — Bottle, Cap, Pot (Inner/Outer
+  // Pot collapse into "Pot" so they share one section instead of being dropped).
+  const FAMILY_ORDER: ProductFamily[] = ['bottle', 'cap', 'pot'];
+  const familyLabels: Record<ProductFamily, string> = {
+    bottle: dict.nav.bottles,
+    cap: dict.nav.caps,
+    pot: dict.nav.pot,
+  };
+  const grouped: { family: ProductFamily; categories: ProductCategoryBasic[] }[] = [];
   if (filterData) {
-    for (const type of filterData.types) {
-      const cats = filterData.categories.filter(cat => {
-        const t = resolveTypeForCategory(cat, filterData.types);
-        return t?.id === type.id;
-      });
-      grouped.push({ type, categories: cats });
+    for (const family of FAMILY_ORDER) {
+      const cats = filterData.categories.filter(cat => familyOfCategory(cat) === family);
+      if (cats.length > 0) grouped.push({ family, categories: cats });
     }
   }
 
@@ -246,8 +258,9 @@ export default function ProductsLanding() {
         ) : (
           grouped.map((group, i) => (
             <TypeSection
-              key={group.type.id}
-              type={group.type}
+              key={group.family}
+              family={group.family}
+              familyLabel={familyLabels[group.family]}
               categories={group.categories}
               lang={lang}
               sectionIndex={i}

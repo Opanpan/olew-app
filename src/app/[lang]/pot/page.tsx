@@ -6,12 +6,12 @@ import { categoriesForFamily } from '@/lib/productTaxonomy';
 import CatalogHeader from '@/components/catalog/CatalogHeader';
 import CatalogClient from '@/components/catalog/CatalogClient';
 
-interface CapsPageProps {
+interface PotPageProps {
   params: { lang: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export default async function CapsPage({ params, searchParams }: CapsPageProps) {
+export default async function PotPage({ params, searchParams }: PotPageProps) {
   const lang = params.lang as Lang;
   const dict = getDictionary(lang);
 
@@ -20,41 +20,52 @@ export default async function CapsPage({ params, searchParams }: CapsPageProps) 
     getAttributeDefinitions(),
   ]);
 
-  const capCategoryIds = categoriesForFamily(filterData?.categories ?? [], 'cap').map(c => c.id);
+  // "Pot" merges the Pot / Inner Pot / Outer Pot API categories into one catalog section.
+  const potCategoryIds = categoriesForFamily(filterData?.categories ?? [], 'pot').map((c) => c.id);
 
   const search = typeof searchParams.search === 'string' ? searchParams.search : '';
   const categoryId = typeof searchParams.category_id === 'string' ? searchParams.category_id : '';
 
   // The API's type_id filter doesn't match admin-created products (only a seed
   // dataset that no longer exists), so the default view fetches every
-  // Cap-family category_id in parallel and merges the results instead.
+  // Pot-family category_id in parallel and merges the results instead.
   let data: ProductListItem[];
   if (categoryId) {
-    const result = await getProducts({ limit: 100, offset: 0, search: search || undefined, category_id: categoryId });
+    const result = await getProducts({
+      limit: 100,
+      offset: 0,
+      search: search || undefined,
+      category_id: categoryId,
+    });
     data = result.data;
   } else {
     const results = await Promise.all(
-      capCategoryIds.map((id) => getProducts({ limit: 100, offset: 0, search: search || undefined, category_id: id }))
+      potCategoryIds.map((id) => getProducts({
+        limit: 100,
+        offset: 0,
+        search: search || undefined,
+        category_id: id,
+      }))
     );
     const seen = new Set<string>();
     data = results.flatMap((r) => r.data).filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
   }
 
-  // Scope the sidebar's category filter to Cap-family categories only, so
-  // Bottle and Pot categories don't bleed into this page.
+  // Scope the sidebar's category filter to Pot-family categories only, so Bottle
+  // and Cap categories don't bleed into this page.
   const scopedFilterData = filterData
-    ? { ...filterData, categories: categoriesForFamily(filterData.categories, 'cap') }
+    ? { ...filterData, categories: categoriesForFamily(filterData.categories, 'pot') }
     : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <CatalogHeader
-        badge={dict.catalog.caps.badge}
-        title={dict.catalog.caps.title}
-        subtitle={dict.catalog.caps.subtitle}
+        badge={dict.catalog.pot.badge}
+        title={dict.catalog.pot.title}
+        subtitle={dict.catalog.pot.subtitle}
         breadcrumbs={[
           { label: dict.nav.home, href: `/${lang}` },
-          { label: dict.nav.caps },
+          { label: dict.nav.pot },
         ]}
       />
       <main className="py-8 md:py-10 px-4 md:px-8">
@@ -65,7 +76,7 @@ export default async function CapsPage({ params, searchParams }: CapsPageProps) 
               filterData={scopedFilterData}
               attrDefs={attrDefsData?.attributes ?? []}
               lang={lang}
-              emptyMessage={dict.catalog.caps.empty_state}
+              emptyMessage={dict.catalog.pot.empty_state}
               searchPlaceholder={dict.catalog.filters.search_placeholder}
               showingLabel={dict.catalog.filters.showing}
               resultsLabel={dict.catalog.filters.results}
