@@ -391,17 +391,25 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // the API response rather than exposed as sliders. Every role is computed the
   // same way, independently, off its own selected item.
   function deriveLayerBounds(item: CompatibleProduct | null) {
-    const rawMin = item?.min_position_vertical ?? -1;
-    const rawMax = item?.max_position_vertical ?? 2;
-    // Guard against a misconfigured admin range (min === max, or min > max) collapsing
-    // the slider to zero width and making it impossible to drag.
+    // The midpoint (the default/"0" render position) must always match admin's
+    // own Combined Preview formula exactly: a missing min/max is treated as 0,
+    // not as an arbitrary fallback range — otherwise a compat item with no
+    // configured range (or only one side configured) renders at a visibly
+    // different default position than what the admin sees while configuring.
+    const rawMin = typeof item?.min_position_vertical === 'number' ? item.min_position_vertical : 0;
+    const rawMax = typeof item?.max_position_vertical === 'number' ? item.max_position_vertical : 0;
+    const mid = (rawMin + rawMax) / 2;
+    // Guard against a degenerate range (min === max, or min > max) collapsing
+    // the slider to zero width — falls back to a small symmetric range around
+    // that same midpoint, so the default position never shifts, only the
+    // draggable width does.
     const valid = rawMin < rawMax;
     return {
       scale: item?.scale ?? 1,
       offsetX: item?.position?.x ?? 0,
       offsetZ: item?.position?.z ?? 0,
-      min: valid ? rawMin : -1,
-      max: valid ? rawMax : 2,
+      min: valid ? rawMin : mid - 1,
+      max: valid ? rawMax : mid + 1,
     };
   }
   const layerBoundsByRole = useMemo(() => {
