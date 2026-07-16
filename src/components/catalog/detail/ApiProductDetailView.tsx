@@ -513,8 +513,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
         <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-8 lg:gap-12">
 
-          {/* ══ LEFT: Gallery / 3D ══ */}
-          <div className="max-w-[420px] w-full mx-auto lg:mx-0">
+          {/* ══ LEFT: Gallery / 3D (sticky — follows the taller right column while scrolling) ══ */}
+          <div className="max-w-[420px] w-full mx-auto lg:mx-0 lg:sticky lg:top-28 lg:self-start">
             <AnimatePresence mode="wait">
               {!show3DPreview ? (
                 <motion.div
@@ -669,8 +669,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
             )}
           </div>
 
-          {/* ══ RIGHT: Product info (sticky) ══ */}
-          <div className="space-y-5 lg:sticky lg:top-28 lg:self-start min-w-0">
+          {/* ══ RIGHT: Product info ══ */}
+          <div className="space-y-5 min-w-0">
 
             {/* ── Product header ── */}
             <div>
