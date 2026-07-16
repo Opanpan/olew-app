@@ -100,6 +100,7 @@ export default function CatalogClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', String(newPage));
     router.push(`?${params.toString()}`, { scroll: false });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [router, searchParams]);
 
   // Client-side attribute filtering — now uses real attribute values from the API list response
