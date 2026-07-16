@@ -158,12 +158,14 @@ export interface ProductAttribute {
 
 export interface ProductTypeBasic {
   id: string;
+  code?: string;
   name_en: string;
   name_id: string;
 }
 
 export interface ProductCategoryBasic {
   id: string;
+  code?: string;
   name_en: string;
   name_id: string;
 }
@@ -172,6 +174,8 @@ export interface ProductDetail {
   id: string;
   name_en: string;
   name_id: string;
+  slug_en: string;
+  slug_id: string;
   description: ProductDescription | null;
   three_d_file_path?: string;
   images: ProductImage[];
@@ -188,6 +192,8 @@ export interface CompatibleProduct {
   id: string;
   name_en: string;
   name_id: string;
+  slug_en?: string;
+  slug_id?: string;
   three_d_file_path?: string;
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
@@ -419,6 +425,46 @@ export async function getAttributeDefinitions(): Promise<AttributeDefinitionList
     return {
       attributes: Array.isArray(data.attributes) ? data.attributes : [],
       total_count: data.total_count ?? 0,
+    };
+  } catch (err) {
+    if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    return null;
+  }
+}
+
+// ── SEO sitemap feed ─────────────────────────────────────────────────────────
+
+export interface SitemapProductItem {
+  id: string;
+  slug_en: string;
+  slug_id: string;
+  updated_at: string;
+}
+
+export interface SitemapStaticPage {
+  path: string;
+  updated_at: string | null;
+}
+
+export interface SitemapFeed {
+  generated_at: string;
+  products: SitemapProductItem[];
+  static_pages: SitemapStaticPage[];
+}
+
+export async function getSitemapFeed(): Promise<SitemapFeed | null> {
+  const url = `${BASE_URL}/api/v1/public/seo/sitemap`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    const json = await res.json();
+    devLog(url, res.status, null, json);
+    if (!res.ok) return null;
+    const data = json?.data;
+    if (!data) return null;
+    return {
+      generated_at: data.generated_at,
+      products: Array.isArray(data.products) ? data.products : [],
+      static_pages: Array.isArray(data.static_pages) ? data.static_pages : [],
     };
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);

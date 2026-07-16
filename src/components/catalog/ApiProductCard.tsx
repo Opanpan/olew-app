@@ -9,6 +9,7 @@ import { useLang } from '@/lib/LangContext';
 import { useCompare } from '@/lib/CompareContext';
 import type { CompareItem } from '@/lib/CompareContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
+import { productPath, productSlug } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
 
@@ -24,11 +25,12 @@ export default function ApiProductCard({ product, lang, index = 0 }: ApiProductC
   const [showMaxMsg, setShowMaxMsg] = useState(false);
 
   const name = lang === 'id' ? product.name_id : product.name_en;
-  const detailUrl = `/${lang}/products/${product.id}`;
+  const slug = productSlug(lang, product);
+  const detailUrl = productPath(lang, product);
   const isComparing = has(product.id);
 
-  const { liked, toggle: toggleLike } = useLike(product.id);
-  const { share, copied } = useShare(product.id, name);
+  const { liked, toggle: toggleLike } = useLike(slug);
+  const { share, copied } = useShare(slug, name);
   const c = dict.catalog.product_card;
 
   const handleCompareToggle = (e: React.MouseEvent) => {

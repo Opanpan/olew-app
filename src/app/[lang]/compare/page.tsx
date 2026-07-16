@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import { useLang } from '@/lib/LangContext';
 import { useCompare } from '@/lib/CompareContext';
 import { getProductDetail, type ProductDetail } from '@/lib/publicApi';
+import { productPath } from '@/lib/seo';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
 import { cn } from '@/lib/utils';
 
@@ -267,7 +268,7 @@ function CompareContent() {
                   </p>
 
                   <Link
-                    href={`/${lang}/products/${product.id}`}
+                    href={productPath(lang, product)}
                     className="flex items-center gap-1 text-[10px] font-semibold text-primary-600 dark:text-primary-400 hover:underline mt-auto"
                   >
                     {c.view_details} <ChevronRight className="w-3 h-3" />

@@ -19,6 +19,7 @@ import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWit
 import ApiProductCard from '../ApiProductCard';
 import { PRODUCT_COLORS, colorToHex } from './EnhancedColorPicker';
 import { classifyFamily, familyToSlug } from '@/lib/productTaxonomy';
+import { productPath } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 
 function Viewer3DLoading() {
@@ -281,7 +282,7 @@ function CompatRoleSection({
                       </div>
                     )}
                     <Link
-                      href={`/${lang}/products/${preview.id}`}
+                      href={productPath(lang, preview)}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline"
                     >
                       <ExternalLink className="w-3 h-3" />
@@ -312,9 +313,11 @@ interface ApiProductDetailViewProps {
   product: ProductDetail;
   relatedProducts: ProductListItem[];
   compatibility?: ProductCompatibility | null;
+  /** The slug (or id, for a legacy deep link) actually present in the URL — used as the identifier for like/share calls per the slug-based SEO routing. */
+  slug: string;
 }
 
-export default function ApiProductDetailView({ product, relatedProducts, compatibility }: ApiProductDetailViewProps) {
+export default function ApiProductDetailView({ product, relatedProducts, compatibility, slug }: ApiProductDetailViewProps) {
   const { lang, dict } = useLang();
   const d = dict.catalog.product_detail;
 
@@ -449,8 +452,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const pc = dict.catalog.product_card;
 
   // Like, share & compare — must be after productName is defined
-  const { liked, likeCount, toggle: toggleLike } = useLike(product.id, product.like_count);
-  const { share, copied } = useShare(product.id, productName);
+  const { liked, likeCount, toggle: toggleLike } = useLike(slug, product.like_count);
+  const { share, copied } = useShare(slug, productName);
   const { toggle: toggleCompare, has: hasCompare, canAdd } = useCompare();
   const isComparing = hasCompare(product.id);
   const [showMaxMsg, setShowMaxMsg] = useState(false);

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
+import { SITE_URL } from '@/lib/seo';
 import './globals.css';
 
 const inter = Inter({
@@ -15,6 +16,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Olew Group - Premium Custom Bottle Packaging Solutions',
   description: 'Leading manufacturer of customizable bottles with premium caps for Body Care, Skincare, Pharmacy, Pump Lotion, and Perfume. Halal certified packaging solutions.',
   keywords: ['custom bottles', 'packaging solutions', 'cosmetic bottles', 'halal certified', 'olew group'],
