@@ -13,6 +13,19 @@ const fallbackClients = [
   'Aroma Plus', 'Bio Pharma', 'Wellness Co', 'Fresh Start', 'Elite Scents', 'Care Zone',
 ];
 
+// A marquee only loops seamlessly (and fills wide screens) if the rendered
+// content is comfortably wider than any viewport. Duplicating a short row just
+// once — the old behavior — left most of the track empty when there were only
+// a couple of real clients. Repeat until there's a healthy minimum of logos,
+// then loop by exactly one copy-width so it tiles perfectly regardless of count.
+const MARQUEE_MIN_ITEMS = 20;
+
+function repeatForMarquee<T>(row: T[]): { items: T[]; repeat: number } {
+  if (row.length === 0) return { items: [], repeat: 1 };
+  const repeat = Math.max(2, Math.ceil(MARQUEE_MIN_ITEMS / row.length));
+  return { items: Array.from({ length: repeat }, () => row).flat(), repeat };
+}
+
 function ClientLogo({ name, logo_url }: { name: string; logo_url?: string }) {
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
@@ -49,6 +62,9 @@ export default function ClientsSection() {
 
   const fbFirstRow = fallbackClients.slice(0, 6);
   const fbSecondRow = fallbackClients.slice(6, 12);
+
+  const row1 = useApi ? repeatForMarquee(apiFirstRow) : repeatForMarquee(fbFirstRow);
+  const row2 = useApi ? repeatForMarquee(apiSecondRow) : repeatForMarquee(fbSecondRow);
 
   return (
     <section id="clients" className="section-padding bg-white dark:bg-gray-900 overflow-hidden">
@@ -95,14 +111,14 @@ export default function ClientsSection() {
             <div className="flex overflow-hidden">
               <motion.div
                 className="flex"
-                animate={{ x: ['0%', '-50%'] }}
+                animate={{ x: ['0%', `-${100 / row1.repeat}%`] }}
                 transition={{ x: { duration: 30, repeat: Infinity, ease: 'linear' } }}
               >
                 {useApi
-                  ? [...apiFirstRow, ...apiFirstRow].map((c, idx) => (
+                  ? (row1.items as Client[]).map((c, idx) => (
                       <ClientLogo key={`${c.id}-${idx}`} name={c.name} logo_url={c.logo_url} />
                     ))
-                  : [...fbFirstRow, ...fbFirstRow].map((name, idx) => (
+                  : (row1.items as string[]).map((name, idx) => (
                       <ClientLogo key={`${name}-${idx}`} name={name} />
                     ))}
               </motion.div>
@@ -116,14 +132,14 @@ export default function ClientsSection() {
             <div className="flex overflow-hidden">
               <motion.div
                 className="flex"
-                animate={{ x: ['-50%', '0%'] }}
+                animate={{ x: [`-${100 / row2.repeat}%`, '0%'] }}
                 transition={{ x: { duration: 25, repeat: Infinity, ease: 'linear' } }}
               >
                 {useApi
-                  ? [...apiSecondRow, ...apiSecondRow].map((c, idx) => (
+                  ? (row2.items as Client[]).map((c, idx) => (
                       <ClientLogo key={`${c.id}-r2-${idx}`} name={c.name} logo_url={c.logo_url} />
                     ))
-                  : [...fbSecondRow, ...fbSecondRow].map((name, idx) => (
+                  : (row2.items as string[]).map((name, idx) => (
                       <ClientLogo key={`${name}-r2-${idx}`} name={name} />
                     ))}
               </motion.div>
