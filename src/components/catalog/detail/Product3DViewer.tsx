@@ -439,7 +439,7 @@ export function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig
             )}
             style={config.isCustom ? { backgroundColor: config.customColor } : {}}
           >
-            {!config.isCustom && <Palette className="w-3 h-3 text-white" />}
+            <Palette className="w-3 h-3 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]" />
           </motion.button>
         </div>
 
