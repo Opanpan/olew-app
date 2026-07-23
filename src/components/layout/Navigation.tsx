@@ -6,11 +6,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sun, Moon, Globe, ChevronDown } from 'lucide-react';
+import { Menu, X, Sun, Moon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 
 const navItems = ['home', 'about', 'products', 'certificates', 'clients', 'contact'] as const;
+
+// Flag shown for each locale in the language switcher (English → UK, Indonesian → Indonesia).
+const LANG_FLAG: Record<'en' | 'id', string> = { en: '🇬🇧', id: '🇮🇩' };
 
 export default function Navigation() {
   const { lang, dict } = useLang();
@@ -56,11 +59,18 @@ export default function Navigation() {
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <Image
-          src="/images/banners/header-bg.png"
+          src="/images/banners/header-bg-light.jpg"
           alt=""
           fill
           priority
           className="object-cover dark:hidden"
+        />
+        <Image
+          src="/images/banners/header-bg-dark.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover hidden dark:block"
         />
       </div>
       <nav className="relative container-custom mx-auto px-4 md:px-8">
@@ -110,7 +120,7 @@ export default function Navigation() {
                 onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
                 className="flex items-center gap-2 px-4 py-3 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
               >
-                <Globe className="w-5 h-5" />
+                <span className="text-lg leading-none" aria-hidden>{LANG_FLAG[lang]}</span>
                 <span className="text-sm font-medium hidden sm:inline">{lang.toUpperCase()}</span>
                 <ChevronDown className={cn('w-4 h-4 transition-transform', isLangMenuOpen && 'rotate-180')} />
               </button>
@@ -128,9 +138,11 @@ export default function Navigation() {
                       onClick={() => setIsLangMenuOpen(false)}
                       className={cn(
                         'block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700',
+                        'flex items-center gap-2.5',
                         lang === 'en' ? 'text-primary-600 font-medium' : 'text-gray-700 dark:text-gray-300'
                       )}
                     >
+                      <span className="text-base leading-none" aria-hidden>{LANG_FLAG.en}</span>
                       English
                     </Link>
                     <Link
@@ -138,9 +150,11 @@ export default function Navigation() {
                       onClick={() => setIsLangMenuOpen(false)}
                       className={cn(
                         'block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700',
+                        'flex items-center gap-2.5',
                         lang === 'id' ? 'text-primary-600 font-medium' : 'text-gray-700 dark:text-gray-300'
                       )}
                     >
+                      <span className="text-base leading-none" aria-hidden>{LANG_FLAG.id}</span>
                       Bahasa Indonesia
                     </Link>
                   </motion.div>
