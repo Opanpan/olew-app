@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +16,8 @@ interface ProductGalleryProps {
 export default function ProductGallery({ images, productName }: ProductGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [emblaThumbsRef, emblaThumbsApi] = useEmblaCarousel({
     containScroll: 'keepSnaps',
@@ -53,60 +56,67 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   return (
     <div className="space-y-4">
       {/* Main Image */}
-      <div className="relative">
-        <div className="overflow-hidden rounded-2xl md:rounded-3xl" ref={emblaRef}>
-          <div className="flex">
-            {images.map((image, index) => (
-              <div
-                key={index}
-                className="flex-[0_0_100%] min-w-0"
-              >
-                <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                  <ImgWithFallback
-                    src={image}
-                    alt={`${productName} - Image ${index + 1}`}
-                    fallback={PRODUCT_PLACEHOLDER}
-                    className="w-full h-full object-contain p-6 md:p-8"
-                    loading={index === 0 ? 'eager' : 'lazy'}
-                  />
+      <div className="group relative">
+        {/* Premium framed card */}
+        <div className="relative rounded-3xl overflow-hidden">
+          <div className="relative overflow-hidden rounded-3xl" ref={emblaRef}>
+            <div className="flex">
+              {images.map((image, index) => (
+                <div
+                  key={index}
+                  className="flex-[0_0_100%] min-w-0"
+                >
+                  <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                    {/* subtle grid/vignette accents */}
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_0%,transparent_60%,rgba(0,0,0,0.05))] dark:bg-[radial-gradient(120%_120%_at_50%_0%,transparent_55%,rgba(0,0,0,0.35))]" />
+                    <ImgWithFallback
+                      src={image}
+                      alt={`${productName} - Image ${index + 1}`}
+                      fallback={PRODUCT_PLACEHOLDER}
+                      className="relative w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Navigation Buttons */}
-        {images.length > 1 && (
-          <>
-            <button
-              onClick={scrollPrev}
-              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all"
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-900 dark:text-white" />
-            </button>
-            <button
-              onClick={scrollNext}
-              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 p-2 md:p-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all"
-              aria-label="Next image"
-            >
-              <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-900 dark:text-white" />
-            </button>
-          </>
-        )}
+          {/* Navigation Buttons */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={scrollPrev}
+                className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 p-2 md:p-2.5 rounded-full bg-white/85 dark:bg-gray-800/85 backdrop-blur-md shadow-lg ring-1 ring-black/5 dark:ring-white/10 hover:bg-white dark:hover:bg-gray-700 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover:opacity-100"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-900 dark:text-white" />
+              </button>
+              <button
+                onClick={scrollNext}
+                className="absolute right-4 md:right-5 top-1/2 -translate-y-1/2 p-2 md:p-2.5 rounded-full bg-white/85 dark:bg-gray-800/85 backdrop-blur-md shadow-lg ring-1 ring-black/5 dark:ring-white/10 hover:bg-white dark:hover:bg-gray-700 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover:opacity-100"
+                aria-label="Next image"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-900 dark:text-white" />
+              </button>
+            </>
+          )}
 
-        {/* Fullscreen Button */}
-        <button
-          onClick={() => setIsFullscreen(true)}
-          className="absolute top-2 md:top-4 right-2 md:right-4 p-2 md:p-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all"
-          aria-label="View fullscreen"
-        >
-          <Maximize2 className="w-4 h-4 md:w-5 md:h-5 text-gray-900 dark:text-white" />
-        </button>
+          {/* Fullscreen Button */}
+          <button
+            onClick={() => setIsFullscreen(true)}
+            className="absolute top-4 md:top-5 right-4 md:right-5 p-2.5 rounded-full bg-white/85 dark:bg-gray-800/85 backdrop-blur-md shadow-lg ring-1 ring-black/5 dark:ring-white/10 text-gray-700 dark:text-gray-200 hover:bg-primary-500 hover:text-white hover:scale-110 active:scale-95 transition-all"
+            aria-label="View fullscreen"
+          >
+            <Maximize2 className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
 
-        {/* Image Counter */}
-        <div className="absolute bottom-2 md:bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/70 text-white text-xs md:text-sm font-medium backdrop-blur-sm">
-          {selectedIndex + 1} / {images.length}
+          {/* Image Counter */}
+          {images.length > 1 && (
+            <div className="absolute bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/60 text-white text-[11px] md:text-xs font-semibold tracking-wide backdrop-blur-md ring-1 ring-white/10">
+              {selectedIndex + 1} <span className="opacity-50">/</span> {images.length}
+            </div>
+          )}
         </div>
       </div>
 
@@ -138,14 +148,15 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
         </div>
       )}
 
-      {/* Fullscreen Modal */}
+      {/* Fullscreen Modal — portaled to body so it escapes the sticky column's stacking context */}
+      {mounted && createPortal(
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm"
             onClick={() => setIsFullscreen(false)}
           >
             <button
@@ -165,7 +176,9 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 }
