@@ -243,7 +243,7 @@ function CompareContent() {
                     {show3D && product.three_d_file_path ? (
                       <Product3DViewer
                         bottleModelUrl={product.three_d_file_path}
-                        bottleColor="#22c55e"
+                        bottleColor="#d1d5db"
                         compact
                       />
                     ) : product.images[0] ? (
