@@ -22,21 +22,8 @@ import { classifyFamily, familyToSlug } from '@/lib/productTaxonomy';
 import { productPath } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 
-function Viewer3DLoading() {
-  const { dict } = useLang();
-  return (
-    <div className="w-full aspect-square rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-      <div className="text-center">
-        <Box className="w-12 h-12 animate-spin text-primary-600 dark:text-primary-400 mx-auto mb-3" />
-        <p className="text-sm text-gray-600 dark:text-gray-400">{dict.catalog.product_detail.loading_3d_viewer}</p>
-      </div>
-    </div>
-  );
-}
-
 const Product3DViewer = dynamic(() => import('./Product3DViewer'), {
   ssr: false,
-  loading: () => <Viewer3DLoading />,
 });
 
 // Rendered outside the canvas now, but kept in the same dynamically-imported,
@@ -53,6 +40,9 @@ const ColorSwatchPanel = dynamic(
 // Outer/Inner Pot, which preserves plain Bottle+Cap behavior unchanged.
 const COMPAT_ROLES = ['cap', 'outer_pot', 'inner_pot'] as const;
 type CompatRole = typeof COMPAT_ROLES[number];
+// Max upward position offset (real 3D units) a customer can raise a layer from
+// its default position. The slider shows this value directly — no normalization.
+const POSITION_MAX = 1.5;
 const ROLE_LABELS: Record<CompatRole, { en: string; id: string }> = {
   cap: { en: 'Cap', id: 'Tutup' },
   outer_pot: { en: 'Outer Pot', id: 'Pot Luar' },
@@ -152,10 +142,11 @@ function AccordionSection({ title, isOpen, onToggle, children, isFirst = false, 
 // ── Compatible-products section, one instance per role (Cap / Outer Pot / Inner Pot) ──
 
 function CompatRoleSection({
-  role, items, selectedId, preview, loading, onSelect, onClear,
+  role, items, thumbs, selectedId, preview, loading, onSelect, onClear,
 }: {
   role: CompatRole;
   items: CompatibleProduct[];
+  thumbs: Record<string, string | undefined>;
   selectedId: string | null;
   preview: ProductDetail | null;
   loading: boolean;
@@ -165,6 +156,21 @@ function CompatRoleSection({
   const { lang, dict } = useLang();
   const scrollRef = useRef<HTMLDivElement>(null);
   const drag = useRef({ active: false, hasDragged: false, startX: 0, scrollLeft: 0 });
+
+  // Vertical mouse-wheel scrolls the row horizontally. Attached as a non-passive
+  // native listener so preventDefault works (React's onWheel is passive), and only
+  // hijacks the page scroll while the row actually has horizontal overflow.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY === 0 || el.scrollWidth <= el.clientWidth) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
@@ -181,50 +187,90 @@ function CompatRoleSection({
       {/* Horizontal scroll list */}
       <div
         ref={scrollRef}
-        className="p-4 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+        className="px-4 pt-4 pb-3 overflow-x-auto cursor-grab active:cursor-grabbing select-none"
         onMouseDown={(e) => {
           const el = scrollRef.current;
           if (!el) return;
-          drag.current = { active: true, hasDragged: false, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+          drag.current = { active: true, hasDragged: false, startX: e.clientX, scrollLeft: el.scrollLeft };
+
+          // Bind move/up to window so the drag keeps tracking even when the cursor
+          // leaves the row or outruns it, and always releases cleanly.
+          const onMove = (ev: MouseEvent) => {
+            if (!drag.current.active) return;
+            ev.preventDefault();
+            const delta = ev.clientX - drag.current.startX;
+            if (Math.abs(delta) > 4) drag.current.hasDragged = true;
+            el.scrollLeft = drag.current.scrollLeft - delta;
+          };
+          const onUp = () => {
+            drag.current.active = false;
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
         }}
-        onMouseMove={(e) => {
-          const el = scrollRef.current;
-          if (!el || !drag.current.active) return;
-          e.preventDefault();
-          const x = e.pageX - el.offsetLeft;
-          const delta = x - drag.current.startX;
-          if (Math.abs(delta) > 4) drag.current.hasDragged = true;
-          el.scrollLeft = drag.current.scrollLeft - delta;
-        }}
-        onMouseUp={() => { drag.current.active = false; }}
-        onMouseLeave={() => { drag.current.active = false; }}
       >
-        <div className="flex gap-3">
+        <div className="flex gap-4 items-start">
           {items.map((item) => {
             const name = lang === 'id' ? item.name_id : item.name_en;
             const isSelected = selectedId === item.id;
+            const thumb = thumbs[item.id];
             return (
               <button
                 key={item.id}
                 onClick={() => { if (!drag.current.hasDragged) onSelect(item.id); }}
                 className={cn(
-                  'flex-shrink-0 flex flex-col items-center gap-2 p-3 w-28 rounded-xl border transition-all duration-200 group',
+                  'group relative flex-shrink-0 w-44 rounded-2xl overflow-hidden border text-left transition-all duration-300',
+                  'hover:-translate-y-1 hover:shadow-xl hover:shadow-primary-500/10',
                   isSelected
-                    ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-400 dark:border-primary-500'
-                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 dark:hover:bg-primary-900/10'
+                    ? 'border-primary-400 dark:border-primary-500 ring-2 ring-primary-400/40 shadow-lg shadow-primary-500/15'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600'
                 )}
               >
-                <div className={cn(
-                  'w-12 h-12 rounded-lg border flex items-center justify-center transition-colors',
-                  isSelected
-                    ? 'bg-white dark:bg-gray-800 border-primary-300'
-                    : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 group-hover:border-primary-300'
-                )}>
-                  <Package className={cn('w-6 h-6 transition-colors', isSelected ? 'text-primary-500' : 'text-gray-300 dark:text-gray-500 group-hover:text-primary-400')} />
+                {/* Full product image — fixed square, independent of title height */}
+                <div className="relative h-44 w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                  {thumb ? (
+                    <ImgWithFallback
+                      src={thumb}
+                      alt={name}
+                      fallback={PRODUCT_PLACEHOLDER}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className={cn('w-10 h-10 transition-colors', isSelected ? 'text-primary-400' : 'text-gray-300 dark:text-gray-600 group-hover:text-primary-400')} />
+                    </div>
+                  )}
+                  {/* Selected checkmark badge */}
+                  <AnimatePresence>
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                        className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-primary-500 shadow-lg shadow-primary-500/40 flex items-center justify-center ring-2 ring-white dark:ring-gray-900"
+                      >
+                        <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <span className={cn('text-[10px] font-semibold text-center leading-tight line-clamp-2 transition-colors', isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-400 group-hover:text-primary-600')}>
-                  {name}
-                </span>
+                {/* Name footer */}
+                <div className={cn(
+                  'px-3 py-2.5 border-t transition-colors',
+                  isSelected
+                    ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-100 dark:border-primary-800/50'
+                    : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 group-hover:bg-primary-50/40 dark:group-hover:bg-primary-900/10'
+                )}>
+                  <span className={cn(
+                    'block text-xs font-semibold leading-snug line-clamp-2 min-h-[2.5em] transition-colors',
+                    isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                  )}>
+                    {name}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -337,6 +383,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // correctly before the customer picks anything. Falls back to 'cap' while
   // in flight, so nothing disappears/flashes empty during classification.
   const [idToRole, setIdToRole] = useState<Record<string, CompatRole>>({});
+  // Thumbnail per compatible item, captured from the same eager detail fetch used
+  // for role classification, so the scroller tiles show the real product image
+  // instead of a generic placeholder icon.
+  const [idToThumb, setIdToThumb] = useState<Record<string, string | undefined>>({});
   useEffect(() => {
     const items = compatibility?.compatible ?? [];
     if (items.length === 0) return;
@@ -344,10 +394,14 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     Promise.all(items.map((item) => getProductDetail(item.id))).then((details) => {
       if (cancelled) return;
       const map: Record<string, CompatRole> = {};
+      const thumbs: Record<string, string | undefined> = {};
       items.forEach((item, i) => {
-        map[item.id] = classifyByTypeName(details[i]?.type?.name_en);
+        const detail = details[i];
+        map[item.id] = classifyByTypeName(detail?.type?.name_en);
+        thumbs[item.id] = detail?.images.find(img => img.is_thumbnail)?.file_path ?? detail?.images[0]?.file_path;
       });
       setIdToRole(map);
+      setIdToThumb(thumbs);
     });
     return () => { cancelled = true; };
   }, [compatibility]);
@@ -444,6 +498,33 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // Per-role vertical position slider (customer-adjustable, bounded by admin-configured range)
   const [capPositionY, setCapPositionY] = useState<Record<CompatRole, number>>(emptyByRole(0));
 
+  // Cascading stacking constraint: a lower layer may never be raised past the
+  // active layer directly above it — inner ≤ outer ≤ cap. COMPAT_ROLES is ordered
+  // top→bottom, so we walk it top-down: each role's absolute position is capped
+  // at the nearest active role above it, and that clamped position becomes the
+  // ceiling for the next one down. `effectiveOffset` is the actual offset used
+  // for rendering/readout (raw slider value clamped to that ceiling), so if the
+  // layer above moves down the layers below auto-follow without overlapping.
+  const { maxOffsetByRole, effectiveOffsetByRole } = useMemo(() => {
+    const maxOffset = {} as Record<CompatRole, number>;
+    const effective = {} as Record<CompatRole, number>;
+    let ceiling = Infinity; // absolute position the current role may not exceed
+    for (const role of COMPAT_ROLES) {
+      const b = layerBoundsByRole[role];
+      const mid = (b.min + b.max) / 2;
+      // Fixed upward travel in real 3D units: an unconstrained (top) layer can be
+      // raised 0 → POSITION_MAX. Lower layers are then further limited so their
+      // absolute position never passes the layer stacked above them.
+      const max = ceiling === Infinity ? POSITION_MAX : Math.max(0, Math.min(POSITION_MAX, ceiling - mid));
+      maxOffset[role] = max;
+      const eff = Math.min(Math.max(0, capPositionY[role]), max);
+      effective[role] = eff;
+      // Only an actually-selected layer lowers the ceiling for those beneath it.
+      if (selectedCompatItems[role]) ceiling = mid + eff;
+    }
+    return { maxOffsetByRole: maxOffset, effectiveOffsetByRole: effective };
+  }, [layerBoundsByRole, capPositionY, selectedCompatItems]);
+
   const productFamily = classifyFamily(product.type.name_en, product.type.name_id);
   const isBottle = productFamily === 'bottle';
   const categoryPath = familyToSlug(productFamily);
@@ -482,6 +563,32 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
   // Sorted attributes
   const sortedAttributes = [...product.attributes].sort((a, b) => a.sort_order - b.sort_order);
+
+  // WhatsApp inquiry — composes a message with the base bottle plus any selected
+  // cap / outer / inner and each item's chosen color (preset name or custom hex).
+  const WHATSAPP_NUMBER = '622112345678';
+  const colorLabel = (isCustom: boolean, name: string, hex: string) =>
+    isCustom ? hex.toUpperCase() : (name || (lang === 'id' ? 'Bawaan' : 'Default'));
+  const buildQuoteMessage = () => {
+    const colorWord = lang === 'id' ? 'Warna' : 'Color';
+    const lines = [
+      lang === 'id' ? 'Halo, saya tertarik dengan produk berikut:' : "Hi, I'm interested in the following product:",
+      '',
+      `*${lang === 'id' ? 'Botol' : 'Bottle'}:* ${productName}`,
+      `${colorWord}: ${colorLabel(isCustomColor, selectedColorName, customColor)}`,
+    ];
+    for (const role of COMPAT_ROLES) {
+      const item = selectedCompatItems[role];
+      if (!item) continue;
+      lines.push(
+        '',
+        `*${ROLE_LABELS[role][lang]}:* ${lang === 'id' ? item.name_id : item.name_en}`,
+        `${colorWord}: ${colorLabel(isCustomCapColor[role], selectedCapColorName[role], capColor[role])}`,
+      );
+    }
+    return lines.join('\n');
+  };
+  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildQuoteMessage())}`;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pt-24 md:pt-28">
@@ -552,7 +659,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                           url: validGlbUrl(preview?.three_d_file_path || item.three_d_file_path),
                           color: capColor[role],
                           scale: bounds.scale,
-                          positionY: mid + capPositionY[role],
+                          positionY: mid + effectiveOffsetByRole[role],
                           positionX: bounds.offsetX,
                           positionZ: bounds.offsetZ,
                         }];
@@ -596,11 +703,11 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
                   {/* ── Position sliders (one per active role) ── */}
                   {COMPAT_ROLES.filter((role) => selectedCompatItems[role]).map((role) => {
-                    const bounds = layerBoundsByRole[role];
-                    // Distance from the admin's midpoint (0) up to their configured max —
-                    // the slider only goes 0 → up, so the customer can raise the part but
-                    // never lower it below the admin's reference/preview position.
-                    const half = (bounds.max - bounds.min) / 2;
+                    // Slider goes 0 → max: the customer can raise the part but never lower
+                    // it below the admin's reference position, and never above the active
+                    // layer stacked over it (inner ≤ outer ≤ cap).
+                    const max = maxOffsetByRole[role];
+                    const value = effectiveOffsetByRole[role];
                     return (
                       <div key={role} className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
                         <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
@@ -612,15 +719,16 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                               {lang === 'id' ? 'Posisi' : 'Position'}
                             </label>
                             <span className="text-xs font-mono font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30 px-2 py-0.5 rounded">
-                              {capPositionY[role].toFixed(2)}
+                              {value.toFixed(2)}
                             </span>
                           </div>
                           <input
                             type="range"
                             min={0}
-                            max={half}
-                            step={0.05}
-                            value={capPositionY[role]}
+                            max={max}
+                            step={0.01}
+                            value={value}
+                            disabled={max <= 0}
                             onChange={(e) => setCapPositionY((prev) => ({ ...prev, [role]: parseFloat(e.target.value) }))}
                             className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-600"
                           />
@@ -634,17 +742,31 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
             {/* Toggle 2D / 3D — only show if 3D file exists */}
             {product.three_d_file_path && (
-              <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShow3DPreview(!show3DPreview)}
-                className="mt-4 w-full btn-outline flex items-center justify-center gap-2 py-4 text-sm font-semibold"
-              >
-                {show3DPreview ? (
-                  <><ImageIcon className="w-5 h-5" />{d.view_gallery}</>
-                ) : (
-                  <>
-                    <Box className="w-5 h-5" />
+              show3DPreview ? (
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShow3DPreview(false)}
+                  className="group mt-4 w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  <ImageIcon className="w-5 h-5" />
+                  {d.view_gallery}
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShow3DPreview(true)}
+                  className="group relative mt-4 w-full overflow-hidden rounded-2xl py-4 px-5 shadow-lg shadow-primary-500/25 transition-shadow hover:shadow-xl hover:shadow-primary-500/35"
+                >
+                  {/* Gradient fill */}
+                  <span className="absolute inset-0 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600 bg-[length:200%_100%] group-hover:bg-[position:100%_0] transition-[background-position] duration-700" />
+                  {/* Shine sweep on hover */}
+                  <span className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+                  <span className="relative flex items-center justify-center gap-2.5 text-sm font-bold text-white">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+                      <Box className="w-4 h-4" />
+                    </span>
                     {d.view_3d_preview}
                     {(() => {
                       const activeRoles = COMPAT_ROLES.filter((role) => selectedCompatItems[role]);
@@ -652,20 +774,20 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       if (activeRoles.length === 1) {
                         const item = selectedCompatItems[activeRoles[0]]!;
                         return (
-                          <span className="ml-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-500 text-white">
+                          <span className="ml-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/25 ring-1 ring-white/30 text-white">
                             + {lang === 'id' ? item.name_id : item.name_en}
                           </span>
                         );
                       }
                       return (
-                        <span className="ml-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-500 text-white">
+                        <span className="ml-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/25 ring-1 ring-white/30 text-white">
                           + {activeRoles.length}
                         </span>
                       );
                     })()}
-                  </>
-                )}
-              </motion.button>
+                  </span>
+                </motion.button>
+              )
             )}
           </div>
 
@@ -814,6 +936,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                     key={role}
                     role={role}
                     items={compatByRole[role]}
+                    thumbs={idToThumb}
                     selectedId={selectedCompatId[role]}
                     preview={compatPreview[role]}
                     loading={compatLoading[role]}
@@ -940,9 +1063,11 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                 )}
               </AnimatePresence>
 
-              {/* Inquiry button */}
+              {/* Inquiry button — opens WhatsApp with the selected configuration */}
               <motion.a
-                href={`mailto:fanalriansyah@gmail.com?subject=Product Inquiry: ${encodeURIComponent(productName)}&body=Hi, I'm interested in ${encodeURIComponent(productName)} (${product.id}). Please send me more information.`}
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="btn-primary w-full flex items-center justify-center gap-2 py-4 text-sm font-semibold"
