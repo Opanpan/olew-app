@@ -12,7 +12,7 @@ import { ProductDetail, ProductListItem, ProductCompatibility, CompatibleProduct
 import { useLang } from '@/lib/LangContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
 import { useCompare } from '@/lib/CompareContext';
-import type { CompareItem } from '@/lib/CompareContext';
+import type { CompareItem, CompareConfig } from '@/lib/CompareContext';
 import ProductGallery from './ProductGallery';
 import Breadcrumb from '../Breadcrumb';
 import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
@@ -20,7 +20,7 @@ import ApiProductCard from '../ApiProductCard';
 import { PRODUCT_COLORS, colorToHex } from './EnhancedColorPicker';
 import { classifyFamily, familyToSlug } from '@/lib/productTaxonomy';
 import { productPath } from '@/lib/seo';
-import { cn } from '@/lib/utils';
+import { cn, validGlbUrl } from '@/lib/utils';
 
 const Product3DViewer = dynamic(() => import('./Product3DViewer'), {
   ssr: false,
@@ -61,13 +61,6 @@ function classifyByTypeName(typeName: string | undefined): CompatRole {
 // Treat a mock/placeholder URL (cdn.example.com) or anything that isn't a real
 // .glb as "no model" — the viewer shows an unavailable/loading state instead of
 // trying to load it, rather than silently substituting a generic stand-in model.
-function validGlbUrl(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  if (url.includes('cdn.example.com')) return undefined;
-  if (!/\.glb($|\?)/i.test(url)) return undefined;
-  return url;
-}
-
 // Simple error boundary to catch GLB load failures so the canvas doesn't crash/flicker.
 interface EBState { hasError: boolean }
 class Viewer3DErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, EBState> {
@@ -540,11 +533,39 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [showMaxMsg, setShowMaxMsg] = useState(false);
 
   const handleCompare = () => {
+    // Snapshot the current configuration (base colour + each attached part with
+    // its resolved 3D layer) so the Compare page can reproduce the combination.
+    // Mirrors the Product3DViewer `layers` construction used in the preview.
+    const config: CompareConfig = {
+      baseColor: customColor,
+      baseColorName: isCustomColor ? '' : (selectedColorName || ''),
+      layers: COMPAT_ROLES.flatMap((role) => {
+        const compatItem = selectedCompatItems[role];
+        if (!compatItem) return [];
+        const preview = compatPreview[role];
+        const bounds = layerBoundsByRole[role];
+        const mid = (bounds.min + bounds.max) / 2;
+        return [{
+          role,
+          name_en: compatItem.name_en,
+          name_id: compatItem.name_id,
+          url: validGlbUrl(preview?.three_d_file_path || compatItem.three_d_file_path),
+          color: capColor[role],
+          colorName: isCustomCapColor[role] ? '' : (selectedCapColorName[role] || ''),
+          scale: bounds.scale,
+          positionX: bounds.offsetX,
+          positionY: mid + effectiveOffsetByRole[role],
+          positionZ: bounds.offsetZ,
+        }];
+      }),
+    };
     const item: CompareItem = {
       id: product.id,
       name_en: product.name_en,
       name_id: product.name_id,
       thumbnail: product.images.find(i => i.is_thumbnail)?.file_path ?? product.images[0]?.file_path,
+      three_d_file_path: product.three_d_file_path,
+      config,
     };
     const ok = toggleCompare(item);
     if (!ok) {

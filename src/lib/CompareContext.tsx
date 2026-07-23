@@ -4,6 +4,29 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 const MAX_COMPARE = 4;
 const STORAGE_KEY = 'olew_compare_list';
 
+// A single attached part (cap / outer pot / inner pot) snapshotted from the
+// product detail configurator, with everything the 3D viewer needs to replay it.
+export interface CompareLayer {
+  role: string;              // 'cap' | 'outer_pot' | 'inner_pot'
+  name_en: string;
+  name_id: string;
+  url?: string;              // validated glb model
+  color: string;             // hex
+  colorName?: string;        // preset color name, '' when custom
+  scale: number;
+  positionX: number;
+  positionY: number;
+  positionZ: number;
+}
+
+// Full configuration a customer built on the detail page (base colour + parts),
+// captured at add-to-compare time so the Compare page can reproduce it.
+export interface CompareConfig {
+  baseColor: string;         // hex
+  baseColorName?: string;    // preset color name, '' when custom
+  layers: CompareLayer[];
+}
+
 // Minimal shape stored in compare — compatible with ProductListItem and old Product type
 export interface CompareItem {
   id: string;
@@ -14,6 +37,7 @@ export interface CompareItem {
   slug_id?: string;
   min_price?: number;
   three_d_file_path?: string;
+  config?: CompareConfig;
 }
 
 interface CompareCtx {

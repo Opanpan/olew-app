@@ -1,19 +1,21 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, Fragment } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft, X, Package, ChevronRight, ArrowLeftRight, Box, Image as ImageIcon, Minus,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useLang } from '@/lib/LangContext';
 import { useCompare } from '@/lib/CompareContext';
 import { getProductDetail, type ProductDetail } from '@/lib/publicApi';
 import { productPath } from '@/lib/seo';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
-import { cn } from '@/lib/utils';
+import { cn, validGlbUrl } from '@/lib/utils';
+import type { CompareConfig } from '@/lib/CompareContext';
 
 const Product3DViewer = dynamic(
   () => import('@/components/catalog/detail/Product3DViewer'),
@@ -74,6 +76,33 @@ function SpecRow({ label, values, rowIndex, highlight, colCount }: SpecRowProps)
   );
 }
 
+// Swatch + colour name (or hex) used inside the Configuration spec rows.
+function ColorValue({ hex, name }: { hex: string; name?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-1 ring-black/10 dark:ring-white/15"
+        style={{ backgroundColor: hex }}
+      />
+      <span>{name || hex.toUpperCase()}</span>
+    </span>
+  );
+}
+
+// A single "part • colour" line inside a compared product's header card.
+function ConfigChip({ swatch, label, value }: { swatch: string; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span
+        className="w-3 h-3 rounded-full flex-shrink-0 ring-1 ring-black/10 dark:ring-white/15"
+        style={{ backgroundColor: swatch }}
+      />
+      <span className="text-[10px] text-gray-600 dark:text-gray-400 truncate">{label}</span>
+      <span className="ml-auto text-[10px] font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{value}</span>
+    </div>
+  );
+}
+
 function SectionDivider({ title, colCount }: { title: string; colCount: 2 | 3 | 4 }) {
   return (
     <div className={gridColsClass(colCount)}>
@@ -89,8 +118,14 @@ function SectionDivider({ title, colCount }: { title: string; colCount: 2 | 3 | 
 function CompareContent() {
   const searchParams = useSearchParams();
   const { lang, dict } = useLang();
-  const { remove, clear } = useCompare();
+  const { list, remove, clear } = useCompare();
   const c = dict.catalog.compare;
+
+  // Config (base colour + attached parts) snapshotted when the product was added
+  // from the detail configurator; keyed by product id in the persisted list.
+  const configFor = (id: string): CompareConfig | undefined => list.find(i => i.id === id)?.config;
+  const roleLabel = (role: string): string =>
+    role === 'outer_pot' ? c.role_outer_pot : role === 'inner_pot' ? c.role_inner_pot : c.role_cap;
 
   const rawIds = searchParams.get('ids') ?? '';
   const ids = rawIds.split(',').filter(Boolean);
@@ -153,6 +188,14 @@ function CompareContent() {
     new Set(validProducts.flatMap(p => p.attributes.map(a => a.key)))
   ).sort();
 
+  // Per-product saved configuration, and the union of roles selected across them,
+  // so the Configuration section only appears when someone configured a combo.
+  const productConfigs = validProducts.map(p => configFor(p.id));
+  const anyConfig = productConfigs.some(cfg => !!cfg);
+  const roleUnion = (['cap', 'outer_pot', 'inner_pot'] as const).filter(role =>
+    productConfigs.some(cfg => cfg?.layers.some(l => l.role === role))
+  );
+
   let rowIdx = 0;
 
   const productName = (p: ProductDetail) => lang === 'id' ? p.name_id : p.name_en;
@@ -162,9 +205,23 @@ function CompareContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
 
-      {/* Hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary-700 via-primary-600 to-sky-500 pt-20 md:pt-24 pb-8 md:pb-10">
-        <div className="absolute -top-12 -right-12 w-64 h-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
+      {/* Hero — themed background banner (light / dark) */}
+      <div className="relative overflow-hidden bg-primary-700 dark:bg-gray-950 pt-20 md:pt-24 pb-8 md:pb-10">
+        <Image
+          src="/images/banners/compare-hero-light.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover dark:hidden"
+        />
+        <Image
+          src="/images/banners/compare-hero-dark.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover hidden dark:block"
+        />
+        <div className="absolute inset-0 bg-black/5 dark:bg-black/20 pointer-events-none" />
         <div className="relative container-custom mx-auto px-4">
           <nav className="flex items-center gap-1.5 text-xs text-white/60 mb-4">
             <Link href={`/${lang}`} className="hover:text-white transition-colors">{dict.nav.home}</Link>
@@ -228,7 +285,6 @@ function CompareContent() {
                     'relative flex flex-col gap-2.5 p-3 md:p-4',
                     i < validProducts.length - 1 && 'border-r border-gray-100 dark:border-gray-800',
                     i === validProducts.length - 1 && 'rounded-tr-2xl',
-                    i === 0 && 'bg-gradient-to-b from-primary-50/60 to-white dark:from-primary-900/20 dark:to-gray-900'
                   )}
                 >
                   <button
@@ -239,18 +295,33 @@ function CompareContent() {
                   </button>
 
                   {/* Large image or 3D preview */}
-                  <div className="relative w-full max-w-[260px] mx-auto aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 ring-1 ring-gray-200/70 dark:ring-gray-700/50 flex items-center justify-center">
-                    {show3D && product.three_d_file_path ? (
+                  <div className={cn(
+                    'relative w-full max-w-[260px] mx-auto aspect-square rounded-2xl overflow-hidden flex items-center justify-center',
+                    // keep the soft backdrop for flat images, but not behind the 3D canvas
+                    show3D && validGlbUrl(product.three_d_file_path)
+                      ? ''
+                      : 'bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 ring-1 ring-gray-200/70 dark:ring-gray-700/50'
+                  )}>
+                    {show3D && validGlbUrl(product.three_d_file_path) ? (
                       <Product3DViewer
-                        bottleModelUrl={product.three_d_file_path}
-                        bottleColor="#d1d5db"
+                        bottleModelUrl={validGlbUrl(product.three_d_file_path)}
+                        bottleColor={configFor(product.id)?.baseColor ?? '#d1d5db'}
+                        layers={(configFor(product.id)?.layers ?? []).map(l => ({
+                          key: l.role,
+                          url: l.url,
+                          color: l.color,
+                          scale: l.scale,
+                          positionX: l.positionX,
+                          positionY: l.positionY,
+                          positionZ: l.positionZ,
+                        }))}
                         compact
                       />
                     ) : product.images[0] ? (
                       <ImgWithFallback
                         src={product.images.find(img => img.is_thumbnail)?.file_path ?? product.images[0].file_path}
                         alt={productName(product)}
-                        className="w-full h-full object-contain p-3 md:p-4"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
@@ -270,6 +341,29 @@ function CompareContent() {
                   <p className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-tight line-clamp-2">
                     {productName(product)}
                   </p>
+
+                  {/* Configured combination — bottle + attached parts with their colours */}
+                  {(() => {
+                    const cfg = configFor(product.id);
+                    if (!cfg || cfg.layers.length === 0) return null;
+                    return (
+                      <div className="flex flex-col gap-1 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-2">
+                        <ConfigChip
+                          swatch={cfg.baseColor}
+                          label={c.bottle}
+                          value={cfg.baseColorName || cfg.baseColor.toUpperCase()}
+                        />
+                        {cfg.layers.map(l => (
+                          <ConfigChip
+                            key={l.role}
+                            swatch={l.color}
+                            label={`${roleLabel(l.role)}: ${lang === 'id' ? l.name_id : l.name_en}`}
+                            value={l.colorName || l.color.toUpperCase()}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   <Link
                     href={productPath(lang, product)}
@@ -322,6 +416,47 @@ function CompareContent() {
                 />
               );
             })}
+
+            {/* Configuration rows — selected parts + colours from the saved combo */}
+            {anyConfig && (
+              <>
+                <SectionDivider title={c.spec_configuration} colCount={colCount} />
+                <SpecRow
+                  label={c.bottle_color}
+                  rowIndex={rowIdx++}
+                  highlight={isDiff(productConfigs.map(cfg => cfg ? (cfg.baseColorName || cfg.baseColor) : '—'))}
+                  colCount={colCount}
+                  values={productConfigs.map((cfg, i) => cfg
+                    ? <ColorValue key={i} hex={cfg.baseColor} name={cfg.baseColorName} />
+                    : null)}
+                />
+                {roleUnion.map(role => {
+                  const parts = productConfigs.map(cfg => cfg?.layers.find(l => l.role === role));
+                  return (
+                    <Fragment key={role}>
+                      <SpecRow
+                        label={c.selected_fmt.replace('{role}', roleLabel(role))}
+                        rowIndex={rowIdx++}
+                        highlight={isDiff(parts.map(l => l ? (lang === 'id' ? l.name_id : l.name_en) : '—'))}
+                        colCount={colCount}
+                        values={parts.map((l, i) => l
+                          ? <span key={i} className="font-semibold">{lang === 'id' ? l.name_id : l.name_en}</span>
+                          : null)}
+                      />
+                      <SpecRow
+                        label={c.color_fmt.replace('{role}', roleLabel(role))}
+                        rowIndex={rowIdx++}
+                        highlight={isDiff(parts.map(l => l ? (l.colorName || l.color) : '—'))}
+                        colCount={colCount}
+                        values={parts.map((l, i) => l
+                          ? <ColorValue key={i} hex={l.color} name={l.colorName} />
+                          : null)}
+                      />
+                    </Fragment>
+                  );
+                })}
+              </>
+            )}
 
             {/* Description rows */}
             {validProducts.some(p => p.description) && (
