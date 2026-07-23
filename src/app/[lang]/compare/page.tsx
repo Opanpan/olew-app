@@ -26,6 +26,18 @@ function isDiff(vals: unknown[]) {
   return new Set(vals.map(String)).size > 1;
 }
 
+// Responsive grid template shared by the header row and every spec row: a
+// narrower sticky label column on mobile, wider on desktop, plus one equal
+// column per product.
+function gridColsClass(colCount: 2 | 3 | 4) {
+  return cn(
+    'grid',
+    colCount === 2 && 'grid-cols-[104px_1fr_1fr] md:grid-cols-[180px_1fr_1fr]',
+    colCount === 3 && 'grid-cols-[104px_repeat(3,1fr)] md:grid-cols-[180px_repeat(3,1fr)]',
+    colCount === 4 && 'grid-cols-[104px_repeat(4,1fr)] md:grid-cols-[180px_repeat(4,1fr)]',
+  );
+}
+
 interface SpecRowProps {
   label: string;
   values: React.ReactNode[];
@@ -35,23 +47,23 @@ interface SpecRowProps {
 }
 
 function SpecRow({ label, values, rowIndex, highlight, colCount }: SpecRowProps) {
+  const stripe = rowIndex % 2 === 0;
   return (
     <div className={cn(
-      'grid',
-      colCount === 2 && 'grid-cols-[160px_1fr_1fr]',
-      colCount === 3 && 'grid-cols-[160px_1fr_1fr_1fr]',
-      colCount === 4 && 'grid-cols-[160px_1fr_1fr_1fr_1fr]',
-      rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/70 dark:bg-gray-800/40',
+      gridColsClass(colCount),
+      stripe ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/70 dark:bg-gray-800/40',
     )}>
       <div className={cn(
-        'flex items-center px-4 py-3.5 border-r border-gray-100 dark:border-gray-800 border-l-2',
+        'sticky left-0 z-10 flex items-center px-3 md:px-4 py-3.5 border-r border-gray-100 dark:border-gray-800 border-l-2',
+        // opaque bg so scrolled product cells don't show through the sticky label
+        stripe ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800',
         highlight ? 'border-l-amber-400' : 'border-l-transparent'
       )}>
-        <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{label}</span>
+        <span className="text-[11px] md:text-xs font-semibold text-gray-600 dark:text-gray-400">{label}</span>
       </div>
       {values.map((val, i) => (
         <div key={i} className={cn(
-          'px-4 py-3.5 flex items-center text-sm font-medium text-gray-900 dark:text-white',
+          'px-3 md:px-4 py-3.5 flex items-center text-[13px] md:text-sm font-medium text-gray-900 dark:text-white',
           i < values.length - 1 && 'border-r border-gray-100 dark:border-gray-800',
           highlight && 'bg-amber-50/60 dark:bg-amber-900/10'
         )}>
@@ -64,13 +76,8 @@ function SpecRow({ label, values, rowIndex, highlight, colCount }: SpecRowProps)
 
 function SectionDivider({ title, colCount }: { title: string; colCount: 2 | 3 | 4 }) {
   return (
-    <div className={cn(
-      'grid',
-      colCount === 2 && 'grid-cols-[160px_1fr_1fr]',
-      colCount === 3 && 'grid-cols-[160px_1fr_1fr_1fr]',
-      colCount === 4 && 'grid-cols-[160px_1fr_1fr_1fr_1fr]',
-    )}>
-      <div className="col-span-full px-4 py-2.5 bg-gradient-to-r from-primary-600/10 to-sky-500/5 dark:from-primary-900/40 dark:to-sky-900/20 border-t border-b border-primary-100 dark:border-primary-900/50">
+    <div className={gridColsClass(colCount)}>
+      <div className="col-span-full sticky left-0 px-3 md:px-4 py-2.5 bg-gradient-to-r from-primary-600/10 to-sky-500/5 dark:from-primary-900/40 dark:to-sky-900/20 border-t border-b border-primary-100 dark:border-primary-900/50">
         <span className="text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-widest">{title}</span>
       </div>
     </div>
@@ -198,20 +205,17 @@ function CompareContent() {
       <div className="container-custom mx-auto px-3 sm:px-4 py-6 md:py-8">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl bg-white dark:bg-gray-900 overflow-x-auto">
           <div className={cn(
-            'min-w-0',
-            colCount === 2 && 'min-w-[600px]',
-            colCount === 3 && 'min-w-[760px]',
-            colCount === 4 && 'min-w-[920px]',
+            colCount === 2 && 'min-w-[440px]',
+            colCount === 3 && 'min-w-[620px]',
+            colCount === 4 && 'min-w-[820px]',
           )}>
 
             {/* Product header row */}
             <div className={cn(
-              'sticky top-16 z-30 grid border-b border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 rounded-t-2xl',
-              colCount === 2 && 'grid-cols-[160px_1fr_1fr]',
-              colCount === 3 && 'grid-cols-[160px_1fr_1fr_1fr]',
-              colCount === 4 && 'grid-cols-[160px_1fr_1fr_1fr_1fr]',
+              'sticky top-16 z-30 border-b border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900 rounded-t-2xl',
+              gridColsClass(colCount),
             )}>
-              <div className="flex items-end px-4 pb-4 pt-6 border-r border-gray-100 dark:border-gray-800 rounded-tl-2xl bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-800/50 dark:to-gray-900">
+              <div className="sticky left-0 z-10 flex items-end px-3 md:px-4 pb-4 pt-6 border-r border-gray-100 dark:border-gray-800 rounded-tl-2xl bg-gradient-to-b from-gray-50/95 to-white dark:from-gray-800/90 dark:to-gray-900">
                 <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{c.specs_label}</span>
               </div>
               {validProducts.map((product, i) => (
@@ -221,7 +225,7 @@ function CompareContent() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.08 }}
                   className={cn(
-                    'relative flex flex-col gap-2 px-3 py-4',
+                    'relative flex flex-col gap-2.5 p-3 md:p-4',
                     i < validProducts.length - 1 && 'border-r border-gray-100 dark:border-gray-800',
                     i === validProducts.length - 1 && 'rounded-tr-2xl',
                     i === 0 && 'bg-gradient-to-b from-primary-50/60 to-white dark:from-primary-900/20 dark:to-gray-900'
@@ -229,13 +233,13 @@ function CompareContent() {
                 >
                   <button
                     onClick={() => removeProduct(product.id)}
-                    className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-500 text-gray-400 transition-colors"
+                    className="absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full flex items-center justify-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm ring-1 ring-black/5 dark:ring-white/10 hover:bg-red-500 hover:text-white text-gray-400 transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
 
-                  {/* Image or 3D */}
-                  <div className="w-full h-24 rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center flex-shrink-0">
+                  {/* Large image or 3D preview */}
+                  <div className="relative w-full max-w-[260px] mx-auto aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 ring-1 ring-gray-200/70 dark:ring-gray-700/50 flex items-center justify-center">
                     {show3D && product.three_d_file_path ? (
                       <Product3DViewer
                         bottleModelUrl={product.three_d_file_path}
@@ -246,30 +250,30 @@ function CompareContent() {
                       <ImgWithFallback
                         src={product.images.find(img => img.is_thumbnail)?.file_path ?? product.images[0].file_path}
                         alt={productName(product)}
-                        className="w-full h-full object-contain p-2"
+                        className="w-full h-full object-contain p-3 md:p-4"
                       />
                     ) : (
-                      <Package className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                      <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
                     )}
                   </div>
 
                   {/* Badges */}
-                  <div className="flex flex-wrap gap-1">
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">
                       {typeName(product)}
                     </span>
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
                       {catName(product)}
                     </span>
                   </div>
 
-                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight line-clamp-2">
+                  <p className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-tight line-clamp-2">
                     {productName(product)}
                   </p>
 
                   <Link
                     href={productPath(lang, product)}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-primary-600 dark:text-primary-400 hover:underline mt-auto"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline mt-auto"
                   >
                     {c.view_details} <ChevronRight className="w-3 h-3" />
                   </Link>
