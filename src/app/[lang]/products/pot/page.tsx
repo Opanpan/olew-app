@@ -65,6 +65,7 @@ export default async function PotPage({ params, searchParams }: PotPageProps) {
         subtitle={dict.catalog.pot.subtitle}
         breadcrumbs={[
           { label: dict.nav.home, href: `/${lang}` },
+          { label: dict.nav.products, href: `/${lang}/products` },
           { label: dict.nav.pot },
         ]}
       />

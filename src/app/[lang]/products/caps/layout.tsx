@@ -30,10 +30,10 @@ export async function generateMetadata({ params }: { params: { lang: string } })
         : 'Comprehensive selection of functional and aesthetic caps',
     },
     alternates: {
-      canonical: `/${params.lang}/caps`,
+      canonical: `/${params.lang}/products/caps`,
       languages: {
-        'en': '/en/caps',
-        'id': '/id/caps',
+        'en': '/en/products/caps',
+        'id': '/id/products/caps',
       },
     },
     robots: {

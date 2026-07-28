@@ -13,15 +13,15 @@ export default function ProductsPage({ params, searchParams }: ProductsPageProps
 
   // Redirect to the typed catalog page with optional category filter
   if (cat === 'bottles') {
-    const dest = sCat ? `/${lang}/bottles?category_id=${sCat}` : `/${lang}/bottles`;
+    const dest = sCat ? `/${lang}/products/bottles?category_id=${sCat}` : `/${lang}/products/bottles`;
     redirect(dest);
   }
   if (cat === 'caps') {
-    const dest = sCat ? `/${lang}/caps?category_id=${sCat}` : `/${lang}/caps`;
+    const dest = sCat ? `/${lang}/products/caps?category_id=${sCat}` : `/${lang}/products/caps`;
     redirect(dest);
   }
   if (cat === 'pot') {
-    const dest = sCat ? `/${lang}/pot?category_id=${sCat}` : `/${lang}/pot`;
+    const dest = sCat ? `/${lang}/products/pot?category_id=${sCat}` : `/${lang}/products/pot`;
     redirect(dest);
   }
 

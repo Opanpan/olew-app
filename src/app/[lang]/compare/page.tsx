@@ -173,8 +173,8 @@ function CompareContent() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{c.empty_title}</h1>
           <p className="text-gray-500 dark:text-gray-400 mb-8">{c.empty_desc}</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href={`/${lang}/bottles`} className="btn-primary px-6 py-3">{dict.nav.bottles}</Link>
-            <Link href={`/${lang}/caps`} className="btn-outline px-6 py-3">{dict.nav.caps}</Link>
+            <Link href={`/${lang}/products/bottles`} className="btn-primary px-6 py-3">{dict.nav.bottles}</Link>
+            <Link href={`/${lang}/products/caps`} className="btn-outline px-6 py-3">{dict.nav.caps}</Link>
           </div>
         </motion.div>
       </div>
@@ -245,7 +245,7 @@ function CompareContent() {
                 {show3D ? <><ImageIcon className="w-3.5 h-3.5" /><span className="hidden sm:inline">{c.view_2d}</span></>
                          : <><Box className="w-3.5 h-3.5" /><span className="hidden sm:inline">{c.view_3d}</span></>}
               </button>
-              <Link href={`/${lang}/bottles`} className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs md:text-sm font-medium hover:bg-white/20 transition-colors">
+              <Link href={`/${lang}/products/bottles`} className="flex items-center gap-1.5 px-3 md:px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs md:text-sm font-medium hover:bg-white/20 transition-colors">
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{c.back}</span>
               </Link>

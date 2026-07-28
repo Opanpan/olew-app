@@ -30,10 +30,10 @@ export async function generateMetadata({ params }: { params: { lang: string } })
         : 'Extensive range of high-quality pots',
     },
     alternates: {
-      canonical: `/${params.lang}/pot`,
+      canonical: `/${params.lang}/products/pot`,
       languages: {
-        'en': '/en/pot',
-        'id': '/id/pot',
+        'en': '/en/products/pot',
+        'id': '/id/products/pot',
       },
     },
     robots: {

@@ -7,7 +7,7 @@ const LOCALES = ['en', 'id'] as const;
 // Baseline routes this frontend always serves, independent of the backend's
 // static_pages feed (which may be empty/partial) — keeps the sitemap useful
 // even before that CMS content is populated.
-const CORE_PATHS = ['', '/about', '/products', '/bottles', '/caps', '/pot'];
+const CORE_PATHS = ['', '/about', '/products', '/products/bottles', '/products/caps', '/products/pot'];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const feed = await getSitemapFeed();

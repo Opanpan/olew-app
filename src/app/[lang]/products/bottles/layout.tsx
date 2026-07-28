@@ -30,10 +30,10 @@ export async function generateMetadata({ params }: { params: { lang: string } })
         : 'Extensive range of high-quality bottles',
     },
     alternates: {
-      canonical: `/${params.lang}/bottles`,
+      canonical: `/${params.lang}/products/bottles`,
       languages: {
-        'en': '/en/bottles',
-        'id': '/id/bottles',
+        'en': '/en/products/bottles',
+        'id': '/id/products/bottles',
       },
     },
     robots: {

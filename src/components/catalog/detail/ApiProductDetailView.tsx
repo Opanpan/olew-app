@@ -620,7 +620,8 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
           <Breadcrumb
             items={[
               { label: dict.nav.home, href: `/${lang}` },
-              { label: categoryName, href: `/${lang}/${categoryPath}` },
+              { label: dict.nav.products, href: `/${lang}/products` },
+              { label: categoryName, href: `/${lang}/products/${categoryPath}` },
               { label: productName },
             ]}
           />
@@ -632,7 +633,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
         {/* Back button */}
         <Link
-          href={`/${lang}/${categoryPath}`}
+          href={`/${lang}/products/${categoryPath}`}
           className="inline-flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 hover:gap-3 transition-all mb-6 md:mb-8 group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform flex-shrink-0" />
@@ -1127,7 +1128,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                 </motion.p>
               </div>
               <Link
-                href={`/${lang}/${categoryPath}`}
+                href={`/${lang}/products/${categoryPath}`}
                 className="hidden md:flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:gap-3 transition-all font-medium group flex-shrink-0 mt-1"
               >
                 {d.view_all}
@@ -1144,7 +1145,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
             {/* Mobile view-all button */}
             <Link
-              href={`/${lang}/${categoryPath}`}
+              href={`/${lang}/products/${categoryPath}`}
               className="md:hidden mt-8 btn-outline w-full flex items-center justify-center gap-2 py-4 min-h-[48px]"
             >
               {d.view_all_products}

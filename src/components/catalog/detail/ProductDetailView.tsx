@@ -169,7 +169,7 @@ export default function ProductDetailView({ product, allProducts, images = [] }:
 
         {/* Back button */}
         <Link
-          href={`/${lang}/${categoryPath}`}
+          href={`/${lang}/products/${categoryPath}`}
           className="inline-flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 hover:gap-3 transition-all mb-6 md:mb-8 group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform flex-shrink-0" />

@@ -172,7 +172,7 @@ function TypeSection({
           transition={{ delay: 0.05 + categories.length * 0.06, duration: 0.4 }}
           className="flex flex-col items-center gap-2.5 group cursor-pointer"
         >
-          <Link href={`/${lang}/${typeSlug}`} className="flex flex-col items-center gap-2.5">
+          <Link href={`/${lang}/products/${typeSlug}`} className="flex flex-col items-center gap-2.5">
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 group-hover:border-primary-400 dark:group-hover:border-primary-500 group-hover:scale-110 transition-all duration-300 bg-gray-50 dark:bg-gray-800/50">
               <span className="text-2xl font-bold text-gray-300 dark:text-gray-600 group-hover:text-primary-400 transition-colors">
                 ···

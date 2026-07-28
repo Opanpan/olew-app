@@ -50,7 +50,7 @@ export default function GlobalNotFound() {
 
             {/* Bottles */}
             <Link
-              href="/en/bottles"
+              href="/en/products/bottles"
               className="group p-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-primary-500 dark:hover:border-primary-500 transition-all hover:shadow-lg"
             >
               <Search className="w-8 h-8 text-primary-600 dark:text-primary-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
@@ -64,7 +64,7 @@ export default function GlobalNotFound() {
 
             {/* Caps */}
             <Link
-              href="/en/caps"
+              href="/en/products/caps"
               className="group p-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-primary-500 dark:hover:border-primary-500 transition-all hover:shadow-lg"
             >
               <Search className="w-8 h-8 text-primary-600 dark:text-primary-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />

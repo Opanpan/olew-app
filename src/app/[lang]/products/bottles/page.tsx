@@ -54,6 +54,7 @@ export default async function BottlesPage({ params, searchParams }: BottlesPageP
         subtitle={dict.catalog.bottles.subtitle}
         breadcrumbs={[
           { label: dict.nav.home, href: `/${lang}` },
+          { label: dict.nav.products, href: `/${lang}/products` },
           { label: dict.nav.bottles },
         ]}
       />
