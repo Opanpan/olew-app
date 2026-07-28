@@ -149,6 +149,10 @@ function CompatRoleSection({
   const { lang, dict } = useLang();
   const scrollRef = useRef<HTMLDivElement>(null);
   const drag = useRef({ active: false, hasDragged: false, startX: 0, scrollLeft: 0 });
+  // Collapsible like the Description section. Default open.
+  const [open, setOpen] = useState(true);
+  const selectedItem = items.find((i) => i.id === selectedId) ?? null;
+  const selectedName = selectedItem ? (lang === 'id' ? selectedItem.name_id : selectedItem.name_en) : null;
 
   // Vertical mouse-wheel scrolls the row horizontally. Attached as a non-passive
   // native listener so preventDefault works (React's onWheel is passive), and only
@@ -163,19 +167,50 @@ function CompatRoleSection({
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+    // Re-run when the section re-opens: the scroll row unmounts while collapsed,
+    // so the listener must reattach to the freshly-mounted element.
+  }, [open]);
 
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
-      {/* Header */}
-      <div className="px-5 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-        <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-          {lang === 'id' ? ROLE_LABELS[role].id : ROLE_LABELS[role].en}
-        </span>
-        <span className="text-[10px] font-semibold text-primary-500 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
-          {items.length}
-        </span>
-      </div>
+      {/* Header — click to collapse/expand */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-5 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest flex-shrink-0">
+            {lang === 'id' ? ROLE_LABELS[role].id : ROLE_LABELS[role].en}
+          </span>
+          {/* Flag: which product is selected — kept visible when collapsed so the
+              customer's choice stays readable without expanding the section. */}
+          {!open && selectedName && (
+            <span className="inline-flex items-center gap-1 min-w-0 text-[10px] font-semibold text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
+              <Check className="w-3 h-3 flex-shrink-0" strokeWidth={3} />
+              <span className="truncate">{selectedName}</span>
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-[10px] font-semibold text-primary-500 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded-full">
+            {items.length}
+          </span>
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </motion.div>
+        </div>
+      </button>
+
+      {/* Collapsible body: product row + inline preview */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
 
       {/* Horizontal scroll list */}
       <div
@@ -342,6 +377,9 @@ function CompatRoleSection({
           </motion.div>
         )}
       </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -361,6 +399,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const d = dict.catalog.product_detail;
 
   const [show3DPreview, setShow3DPreview] = useState(false);
+  const [openSpecs, setOpenSpecs] = useState(true);
   const [openDescription, setOpenDescription] = useState(true);
   const [openAttributes, setOpenAttributes] = useState(true);
 
@@ -491,35 +530,44 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // Per-role vertical position slider (customer-adjustable, bounded by admin-configured range)
   const [capPositionY, setCapPositionY] = useState<Record<CompatRole, number>>(emptyByRole(0));
 
-  // Cascading stacking constraint: a lower layer may never be raised past the
-  // active layer directly above it — inner ≤ outer ≤ cap. COMPAT_ROLES is ordered
-  // top→bottom, so we walk it top-down: each role's absolute position is capped
-  // at the nearest active role above it, and that clamped position becomes the
-  // ceiling for the next one down. `effectiveOffset` is the actual offset used
-  // for rendering/readout (raw slider value clamped to that ceiling), so if the
-  // layer above moves down the layers below auto-follow without overlapping.
+  // Each role's position slider is fully independent: every layer can be raised
+  // 0 → POSITION_MAX from its own admin-configured midpoint, and moving one never
+  // shifts another's value. (Previously a cascading ceiling meant adjusting the
+  // Cap re-clamped the Inner/Outer readouts — that coupling is removed.)
   const { maxOffsetByRole, effectiveOffsetByRole } = useMemo(() => {
     const maxOffset = {} as Record<CompatRole, number>;
     const effective = {} as Record<CompatRole, number>;
-    let ceiling = Infinity; // absolute position the current role may not exceed
     for (const role of COMPAT_ROLES) {
-      const b = layerBoundsByRole[role];
-      const mid = (b.min + b.max) / 2;
-      // Fixed upward travel in real 3D units: an unconstrained (top) layer can be
-      // raised 0 → POSITION_MAX. Lower layers are then further limited so their
-      // absolute position never passes the layer stacked above them.
-      const max = ceiling === Infinity ? POSITION_MAX : Math.max(0, Math.min(POSITION_MAX, ceiling - mid));
-      maxOffset[role] = max;
-      const eff = Math.min(Math.max(0, capPositionY[role]), max);
-      effective[role] = eff;
-      // Only an actually-selected layer lowers the ceiling for those beneath it.
-      if (selectedCompatItems[role]) ceiling = mid + eff;
+      maxOffset[role] = POSITION_MAX;
+      effective[role] = Math.min(Math.max(0, capPositionY[role]), POSITION_MAX);
     }
     return { maxOffsetByRole: maxOffset, effectiveOffsetByRole: effective };
-  }, [layerBoundsByRole, capPositionY, selectedCompatItems]);
+  }, [capPositionY]);
 
   const productFamily = classifyFamily(product.type.name_en, product.type.name_id);
   const isBottle = productFamily === 'bottle';
+
+  // For a Pot base product, pre-select the first item of each role (Cap / Outer /
+  // Inner) so the customer starts from a fully-assembled combination. Runs once,
+  // and only after role classification is ready — before that every item is
+  // provisionally grouped under "cap", which would select the wrong first items.
+  const didAutoSelectRef = useRef(false);
+  useEffect(() => {
+    if (didAutoSelectRef.current) return;
+    if (productFamily !== 'pot') return;
+    const items = compatibility?.compatible ?? [];
+    if (items.length === 0) return;
+    // Wait until every compatible item has been classified into a role.
+    if (items.some((it) => idToRole[it.id] === undefined)) return;
+    didAutoSelectRef.current = true;
+    for (const role of COMPAT_ROLES) {
+      const first = compatByRole[role][0];
+      if (first && !selectedCompatId[role]) handleCompatClick(role, first.id);
+    }
+    // handleCompatClick / selectedCompatId intentionally omitted — this fires once
+    // on the initial classification and must not re-run as selection state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productFamily, compatibility, idToRole, compatByRole]);
   const categoryPath = familyToSlug(productFamily);
   const categoryName = lang === 'id' ? product.type.name_id : product.type.name_en;
   const productName = lang === 'id' ? product.name_id : product.name_en;
@@ -882,35 +930,50 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
             {/* ── Specification / Attributes table card ── */}
             {sortedAttributes.length > 0 && (
               <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
-                {/* Card header */}
-                <div className="px-5 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800">
+                {/* Card header — click to collapse/expand */}
+                <button
+                  onClick={() => setOpenSpecs((v) => !v)}
+                  className="w-full px-5 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/60 dark:to-gray-900 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+                >
                   <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                     {d.specifications}
                   </span>
-                </div>
+                  <motion.div animate={{ rotate: openSpecs ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                  </motion.div>
+                </button>
 
                 {/* Attribute rows */}
-                {sortedAttributes.map((attr, i) => (
-                  <motion.div
-                    key={attr.id}
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className={cn(
-                      'grid grid-cols-[auto_1fr] items-center border-b border-gray-50 dark:border-gray-800/60 last:border-0',
-                      i % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/60 dark:bg-gray-800/30'
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5 px-5 py-3.5 w-40 md:w-44 border-r border-gray-100 dark:border-gray-800 flex-shrink-0">
-                      <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 leading-tight">
-                        {lang === 'id' ? attr.label_id : attr.label_en}
-                      </span>
-                    </div>
-                    <div className="px-5 py-3.5">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{attr.value}</span>
-                    </div>
-                  </motion.div>
-                ))}
+                <AnimatePresence initial={false}>
+                  {openSpecs && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      {sortedAttributes.map((attr, i) => (
+                        <div
+                          key={attr.id}
+                          className={cn(
+                            'grid grid-cols-[auto_1fr] items-center border-b border-gray-50 dark:border-gray-800/60 last:border-0',
+                            i % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/60 dark:bg-gray-800/30'
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 px-5 py-3.5 w-40 md:w-44 border-r border-gray-100 dark:border-gray-800 flex-shrink-0">
+                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 leading-tight">
+                              {lang === 'id' ? attr.label_id : attr.label_en}
+                            </span>
+                          </div>
+                          <div className="px-5 py-3.5">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">{attr.value}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
