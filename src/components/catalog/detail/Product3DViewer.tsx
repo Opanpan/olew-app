@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, useGLTF, useProgress } from '@react-three/drei';
+import { TrackballControls, Environment, useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Loader2, Palette, Check, X, Droplets } from 'lucide-react';
@@ -551,19 +551,17 @@ export default function Product3DViewer({
                   </Suspense>
                 ))}
               </>
-              <OrbitControls
+              {/* Trackball = free arcball rotation on all axes (X/Y and Z roll),
+                  like Meshy's model preview — no fixed up-vector or polar limits. */}
+              <TrackballControls
                 makeDefault
                 enabled={orbitEnabled}
-                enablePan={false}
-                enableZoom={true}
-                enableRotate={true}
+                noPan
                 minDistance={2}
                 maxDistance={6}
-                minPolarAngle={Math.PI / 6}
-                maxPolarAngle={Math.PI / 2}
-                enableDamping={true}
-                dampingFactor={0.05}
-                rotateSpeed={1}
+                rotateSpeed={3.5}
+                zoomSpeed={1.2}
+                dynamicDampingFactor={0.15}
                 target={[0, 0.5, 0]}
               />
             </Suspense>
