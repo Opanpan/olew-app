@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight, MessageCircle, Phone, Mail } from 'lucide-react';
+import { OFFICE_PHONE, OFFICE_PHONE_TEL, MOBILE_PHONE, WHATSAPP_NUMBER, EMAIL } from '@/lib/contact';
 import { useLang } from '@/lib/LangContext';
 
 export default function CTASection() {
@@ -58,7 +59,7 @@ export default function CTASection() {
             </motion.p>
 
             <motion.a
-              href="mailto:info@olewgroup.com"
+              href={`mailto:${EMAIL}`}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -75,25 +76,35 @@ export default function CTASection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.4 }}
-              className="grid md:grid-cols-2 gap-4 mt-12"
+              className="grid md:grid-cols-3 gap-4 mt-12"
             >
-              <a href="tel:+622112345678" className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
+              <a href={`tel:${OFFICE_PHONE_TEL}`} className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
                 <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Phone className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <div className="text-white/60 text-sm">Call us</div>
-                  <div className="text-white font-semibold">+62 21 1234 5678</div>
+                  <div className="text-white font-semibold">{OFFICE_PHONE}</div>
                 </div>
               </a>
 
-              <a href="mailto:info@olewgroup.com" className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
+              <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
+                <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="text-white/60 text-sm">WhatsApp</div>
+                  <div className="text-white font-semibold">{MOBILE_PHONE}</div>
+                </div>
+              </a>
+
+              <a href={`mailto:${EMAIL}`} className="flex items-center gap-4 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 hover:bg-white/20 transition-colors group">
                 <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <div className="text-white/60 text-sm">Email us</div>
-                  <div className="text-white font-semibold">info@olewgroup.com</div>
+                  <div className="text-white font-semibold">{EMAIL}</div>
                 </div>
               </a>
             </motion.div>

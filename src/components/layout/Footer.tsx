@@ -2,14 +2,26 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Phone, Mail, Instagram, Facebook, Linkedin, Twitter } from 'lucide-react';
+import { MapPin, Phone, Smartphone, Mail, Instagram, Youtube } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
+import {
+  OFFICE_ADDRESS, OFFICE_MAPS_URL, OFFICE_PHONE, OFFICE_PHONE_TEL,
+  MOBILE_PHONE, WHATSAPP_NUMBER, EMAIL, SOCIAL_URLS,
+} from '@/lib/contact';
+
+// lucide-react has no TikTok glyph, so draw the brand mark inline.
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+    </svg>
+  );
+}
 
 const socialLinks = [
-  { name: 'Instagram', icon: Instagram, href: '#' },
-  { name: 'Facebook', icon: Facebook, href: '#' },
-  { name: 'LinkedIn', icon: Linkedin, href: '#' },
-  { name: 'Twitter', icon: Twitter, href: '#' },
+  { name: 'Instagram', icon: Instagram, href: SOCIAL_URLS.instagram },
+  { name: 'YouTube', icon: Youtube, href: SOCIAL_URLS.youtube },
+  { name: 'TikTok', icon: TikTokIcon, href: SOCIAL_URLS.tiktok },
 ];
 
 export default function Footer() {
@@ -44,6 +56,9 @@ export default function Footer() {
                 <a
                   key={social.name}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.name}
                   className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center hover:bg-primary-500 transition-colors"
                 >
                   <social.icon className="w-4 h-4" />
@@ -70,17 +85,29 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">{dict.footer.contact_info}</h4>
             <ul className="space-y-3">
-              <li className="flex items-start gap-3 text-gray-400 text-sm">
-                <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
-                <span>{dict.footer.address}</span>
+              <li>
+                <a href={OFFICE_MAPS_URL} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 text-gray-400 hover:text-white text-sm transition-colors">
+                  <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
+                  <span>{OFFICE_ADDRESS}</span>
+                </a>
               </li>
-              <li className="flex items-center gap-3 text-gray-400 text-sm">
-                <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <span>{dict.footer.phone}</span>
+              <li>
+                <a href={`tel:${OFFICE_PHONE_TEL}`} className="flex items-center gap-3 text-gray-400 hover:text-white text-sm transition-colors">
+                  <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                  <span>{OFFICE_PHONE}</span>
+                </a>
               </li>
-              <li className="flex items-center gap-3 text-gray-400 text-sm">
-                <Mail className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <span>{dict.footer.email}</span>
+              <li>
+                <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-gray-400 hover:text-white text-sm transition-colors">
+                  <Smartphone className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                  <span>{MOBILE_PHONE}</span>
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${EMAIL}`} className="flex items-center gap-3 text-gray-400 hover:text-white text-sm transition-colors">
+                  <Mail className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                  <span>{EMAIL}</span>
+                </a>
               </li>
             </ul>
           </div>

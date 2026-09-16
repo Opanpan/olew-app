@@ -1,12 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Award, BadgeCheck, Shield, CheckCircle2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Award, BadgeCheck } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
-
-const certIcons = [BadgeCheck, Shield, CheckCircle2];
-const certGradients = ['from-blue-500 to-indigo-600', 'from-blue-500 to-indigo-600', 'from-amber-500 to-orange-600'];
 
 export default function CertificatesSection() {
   const { dict } = useLang();
@@ -45,41 +41,6 @@ export default function CertificatesSection() {
           >
             {dict.certificates.subtitle}
           </motion.p>
-        </div>
-
-        {/* Certificates Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {dict.certificates.items.map((cert, index) => {
-            const Icon = certIcons[index];
-
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="group"
-              >
-                <div className="h-full bg-white dark:bg-gray-800/50 rounded-3xl border border-gray-100 dark:border-gray-700/50 shadow-xl p-8 text-center transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl">
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    className={cn('w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br shadow-lg', certGradients[index])}
-                  >
-                    <Icon className="w-10 h-10 text-white" />
-                  </motion.div>
-
-                  <h3 className="font-display text-xl font-bold text-gray-900 dark:text-white mb-3">
-                    {cert.title}
-                  </h3>
-
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    {cert.description}
-                  </p>
-                </div>
-              </motion.div>
-            );
-          })}
         </div>
 
         {/* Halal Highlight */}

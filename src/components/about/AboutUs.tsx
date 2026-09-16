@@ -168,7 +168,7 @@ export default function AboutUs() {
                 <div className="relative bg-gradient-to-br from-primary-500 to-purple-600 rounded-3xl p-1">
                   <div className="bg-white dark:bg-gray-900 rounded-3xl p-8">
                     <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-primary-600 to-purple-600 mb-4">
-                      2018
+                      {dict.about.stats.founded_value}
                     </div>
                     <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
                       {dict.about.hero_title}
@@ -299,10 +299,7 @@ export default function AboutUs() {
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <div className="px-4 py-2 rounded-full bg-purple-600 dark:bg-purple-500 text-white text-sm font-semibold">
-                  CPKB Certified
-                </div>
-                <div className="px-4 py-2 rounded-full bg-purple-600 dark:bg-purple-500 text-white text-sm font-semibold">
-                  SJH Certified
+                  {dict.certificates.items[0].title}
                 </div>
               </div>
             </motion.div>

@@ -23,6 +23,7 @@ import {
   type AssemblySlot, SLOTS_TOP_DOWN, SLOTS_BOTTOM_UP, SLOT_BY_KEY,
   emptyBySlot, slotRecordOf, classifyByTypeName,
 } from '@/lib/productAssembly';
+import { WHATSAPP_NUMBER } from '@/lib/contact';
 import { productPath } from '@/lib/seo';
 import { cn, validGlbUrl } from '@/lib/utils';
 
@@ -643,7 +644,6 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // WhatsApp inquiry — composes a message with the base product plus every
   // selected part and its chosen color (preset name or custom hex). Parts are
   // listed top-of-stack down, matching the on-page order.
-  const WHATSAPP_NUMBER = '622112345678';
   const colorLabel = (isCustom: boolean, name: string, hex: string) =>
     isCustom ? hex.toUpperCase() : (name || (lang === 'id' ? 'Bawaan' : 'Default'));
   const buildQuoteMessage = () => {
