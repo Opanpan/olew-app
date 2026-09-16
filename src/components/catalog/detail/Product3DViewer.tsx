@@ -40,6 +40,7 @@ interface Product3DViewerProps {
   bottleModelUrl?: string | null;
   bottleColor: string;
   bottleScale?: number;
+  /** Attached layers, ordered bottom-of-the-stack first — draw order follows array position. */
   layers?: LayerConfig[];
   compact?: boolean;
   /** Controlled by the parent so an externally-rendered color picker can suspend orbit drag. */
@@ -97,8 +98,8 @@ function BottleModel({ url, color, scale = 1, onHeightReady }: {
   return <primitive object={scene} scale={scale} />;
 }
 
-function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0, positionX = 0, positionZ = 0 }: {
-  url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number; positionX?: number; positionZ?: number;
+function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0, positionX = 0, positionZ = 0, renderOrder = 0 }: {
+  url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number; positionX?: number; positionZ?: number; renderOrder?: number;
 }) {
   const { scene: gltfScene } = useGLTF(url);
   const scene = useMemo(() => {
@@ -115,6 +116,10 @@ function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY
     if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
       child.material.color.set(color);
     }
+    // Pot layers interpenetrate (a plug sits inside a cap), so give each an
+    // explicit draw order from its position in the stack — otherwise three.js
+    // sorts by camera distance and coincident surfaces flicker while orbiting.
+    child.renderOrder = renderOrder;
   });
   return (
     <group position={[positionX, bottleHeight + positionY, positionZ]}>
@@ -537,7 +542,7 @@ export default function Product3DViewer({
                     onHeightReady={setComputedBottleHeight}
                   />
                 </Suspense>
-                {layers.map((layer) => layer.url && (
+                {layers.map((layer, i) => layer.url && (
                   <Suspense key={layer.key + layer.url} fallback={<PlaceholderModel color={layer.color} type="cap" />}>
                     <AttachedLayerModel
                       url={layer.url}
@@ -547,6 +552,7 @@ export default function Product3DViewer({
                       positionY={layer.positionY}
                       positionX={layer.positionX}
                       positionZ={layer.positionZ}
+                      renderOrder={i + 1}
                     />
                   </Suspense>
                 ))}

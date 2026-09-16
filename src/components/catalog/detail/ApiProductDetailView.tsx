@@ -18,7 +18,11 @@ import Breadcrumb from '../Breadcrumb';
 import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
 import ApiProductCard from '../ApiProductCard';
 import { PRODUCT_COLORS, colorToHex } from './EnhancedColorPicker';
-import { classifyFamily, familyToSlug } from '@/lib/productTaxonomy';
+import { classifyFamily, breadcrumbSlugFor } from '@/lib/productTaxonomy';
+import {
+  type AssemblySlot, SLOTS_TOP_DOWN, SLOTS_BOTTOM_UP, SLOT_BY_KEY,
+  emptyBySlot, slotRecordOf, classifyByTypeName,
+} from '@/lib/productAssembly';
 import { productPath } from '@/lib/seo';
 import { cn, validGlbUrl } from '@/lib/utils';
 
@@ -34,29 +38,19 @@ const ColorSwatchPanel = dynamic(
   { ssr: false }
 );
 
-// Mix-and-match roles a compatible item can occupy. Classified by the linked
-// product's own product_type (no backend field needed) — "cap" is also the
-// fallback while classification is loading, and for anything that isn't an
-// Outer/Inner Pot, which preserves plain Bottle+Cap behavior unchanged.
-const COMPAT_ROLES = ['cap', 'outer_pot', 'inner_pot'] as const;
-type CompatRole = typeof COMPAT_ROLES[number];
+// Assembly slots a compatible item can occupy — see `@/lib/productAssembly` for
+// the stacking model. Classified by the linked product's own product_type (the
+// API returns no slot field); "cap" is the fallback both while classification is
+// in flight and for anything unrecognised, which preserves plain Bottle+Cap
+// behaviour unchanged.
+//
+// Ordered top-of-the-stack first (Outer Cap → Plug → Inner Cap → Inner Pot) so
+// every list, slider and summary reads down the pot in physical order.
+const COMPAT_ROLES = SLOTS_TOP_DOWN.map((s) => s.key);
+type CompatRole = AssemblySlot;
 // Max upward position offset (real 3D units) a customer can raise a layer from
 // its default position. The slider shows this value directly — no normalization.
 const POSITION_MAX = 1.5;
-const ROLE_LABELS: Record<CompatRole, { en: string; id: string }> = {
-  cap: { en: 'Cap', id: 'Tutup' },
-  outer_pot: { en: 'Outer Pot', id: 'Pot Luar' },
-  inner_pot: { en: 'Inner Pot', id: 'Pot Dalam' },
-};
-function emptyByRole<T>(value: T): Record<CompatRole, T> {
-  return { cap: value, outer_pot: value, inner_pot: value };
-}
-function classifyByTypeName(typeName: string | undefined): CompatRole {
-  const n = (typeName ?? '').trim().toLowerCase();
-  if (n === 'outer pot') return 'outer_pot';
-  if (n === 'inner pot') return 'inner_pot';
-  return 'cap';
-}
 
 // Treat a mock/placeholder URL (cdn.example.com) or anything that isn't a real
 // .glb as "no model" — the viewer shows an unavailable/loading state instead of
@@ -132,7 +126,14 @@ function AccordionSection({ title, isOpen, onToggle, children, isFirst = false, 
   );
 }
 
-// ── Compatible-products section, one instance per role (Cap / Outer Pot / Inner Pot) ──
+// Slot display label, resolved from the shared i18n dictionary so the storefront
+// never hardcodes part names. Accepts the `catalog.compare` dictionary slice,
+// which is where the `role_*` strings live.
+function slotLabel(compareDict: Record<string, string>, role: CompatRole): string {
+  return compareDict[SLOT_BY_KEY[role].dictKey];
+}
+
+// ── Compatible-products section, one instance per slot (Outer Cap / Plug / Inner Cap / Inner Pot, or Cap for bottles) ──
 
 function CompatRoleSection({
   role, items, thumbs, selectedId, preview, loading, onSelect, onClear,
@@ -180,7 +181,7 @@ function CompatRoleSection({
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest flex-shrink-0">
-            {lang === 'id' ? ROLE_LABELS[role].id : ROLE_LABELS[role].en}
+            {slotLabel(dict.catalog.compare, role)}
           </span>
           {/* Flag: which product is selected — kept visible when collapsed so the
               customer's choice stays readable without expanding the section. */}
@@ -403,12 +404,12 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [openDescription, setOpenDescription] = useState(true);
   const [openAttributes, setOpenAttributes] = useState(true);
 
-  // Compatible product inline preview — grouped by role (cap / outer_pot / inner_pot),
+  // Compatible product inline preview — grouped by assembly slot,
   // each role independently selectable so a Cap, Outer Pot, and Inner Pot can all be
   // active simultaneously. Per-role scroll-drag state lives inside CompatRoleSection.
-  const [selectedCompatId, setSelectedCompatId] = useState<Record<CompatRole, string | null>>(emptyByRole(null));
-  const [compatPreview, setCompatPreview] = useState<Record<CompatRole, ProductDetail | null>>(emptyByRole(null));
-  const [compatLoading, setCompatLoading] = useState<Record<CompatRole, boolean>>(emptyByRole(false));
+  const [selectedCompatId, setSelectedCompatId] = useState<Record<CompatRole, string | null>>(emptyBySlot(null));
+  const [compatPreview, setCompatPreview] = useState<Record<CompatRole, ProductDetail | null>>(emptyBySlot(null));
+  const [compatLoading, setCompatLoading] = useState<Record<CompatRole, boolean>>(emptyBySlot(false));
 
   // Classify each compatible item by its own linked product's type — fetched
   // eagerly (metadata only, not the 3D file) so the scrollers can group
@@ -439,7 +440,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   }, [compatibility]);
 
   const compatByRole = useMemo<Record<CompatRole, CompatibleProduct[]>>(() => {
-    const groups: Record<CompatRole, CompatibleProduct[]> = { cap: [], outer_pot: [], inner_pot: [] };
+    const groups = slotRecordOf<CompatibleProduct[]>(() => []);
     for (const item of compatibility?.compatible ?? []) {
       const role = idToRole[item.id] ?? 'cap';
       groups[role].push(item);
@@ -512,9 +513,9 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const [customColor, setCustomColor] = useState('#ffffff');
   const [isCustomColor, setIsCustomColor] = useState(true);
   const [selectedColorName, setSelectedColorName] = useState('');
-  const [capColor, setCapColor] = useState<Record<CompatRole, string>>(emptyByRole('#ffffff'));
-  const [isCustomCapColor, setIsCustomCapColor] = useState<Record<CompatRole, boolean>>(emptyByRole(true));
-  const [selectedCapColorName, setSelectedCapColorName] = useState<Record<CompatRole, string>>(emptyByRole(''));
+  const [capColor, setCapColor] = useState<Record<CompatRole, string>>(emptyBySlot('#ffffff'));
+  const [isCustomCapColor, setIsCustomCapColor] = useState<Record<CompatRole, boolean>>(emptyBySlot(true));
+  const [selectedCapColorName, setSelectedCapColorName] = useState<Record<CompatRole, string>>(emptyBySlot(''));
   // Suspends orbit drag while a color picker (now rendered below the canvas) is open
   const [anyPickerOpen, setAnyPickerOpen] = useState(false);
 
@@ -528,7 +529,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   };
 
   // Per-role vertical position slider (customer-adjustable, bounded by admin-configured range)
-  const [capPositionY, setCapPositionY] = useState<Record<CompatRole, number>>(emptyByRole(0));
+  const [capPositionY, setCapPositionY] = useState<Record<CompatRole, number>>(emptyBySlot(0));
 
   // Each role's position slider is fully independent: every layer can be raised
   // 0 → POSITION_MAX from its own admin-configured midpoint, and moving one never
@@ -546,15 +547,17 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
 
   const productFamily = classifyFamily(product.type.name_en, product.type.name_id);
   const isBottle = productFamily === 'bottle';
+  const isPot = productFamily === 'pot';
 
-  // For a Pot base product, pre-select the first item of each role (Cap / Outer /
-  // Inner) so the customer starts from a fully-assembled combination. Runs once,
-  // and only after role classification is ready — before that every item is
-  // provisionally grouped under "cap", which would select the wrong first items.
+  // For a Pot base product, pre-select the first item of every slot (Outer Cap,
+  // Plug, Inner Cap, Inner Pot) so the customer starts from a fully-assembled
+  // combination. Runs once, and only after slot classification is ready — before
+  // that every item is provisionally bucketed under "cap", which would select the
+  // wrong first items.
   const didAutoSelectRef = useRef(false);
   useEffect(() => {
     if (didAutoSelectRef.current) return;
-    if (productFamily !== 'pot') return;
+    if (!isPot) return;
     const items = compatibility?.compatible ?? [];
     if (items.length === 0) return;
     // Wait until every compatible item has been classified into a role.
@@ -567,8 +570,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     // handleCompatClick / selectedCompatId intentionally omitted — this fires once
     // on the initial classification and must not re-run as selection state changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productFamily, compatibility, idToRole, compatByRole]);
-  const categoryPath = familyToSlug(productFamily);
+  }, [isPot, compatibility, idToRole, compatByRole]);
+  // Parts are unlisted in the catalog but still have reachable detail pages, so
+  // their breadcrumb points back at the pot catalog rather than defaulting to caps.
+  const categoryPath = breadcrumbSlugFor(product.type.name_en, product.type.name_id);
   const categoryName = lang === 'id' ? product.type.name_id : product.type.name_en;
   const productName = lang === 'id' ? product.name_id : product.name_en;
   const pc = dict.catalog.product_card;
@@ -587,7 +592,9 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     const config: CompareConfig = {
       baseColor: customColor,
       baseColorName: isCustomColor ? '' : (selectedColorName || ''),
-      layers: COMPAT_ROLES.flatMap((role) => {
+      // Bottom-up, matching the preview — the Compare page replays these layers
+      // into the same viewer, which derives draw order from array position.
+      layers: SLOTS_BOTTOM_UP.flatMap(({ key: role }) => {
         const compatItem = selectedCompatItems[role];
         if (!compatItem) return [];
         const preview = compatPreview[role];
@@ -633,17 +640,22 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // Sorted attributes
   const sortedAttributes = [...product.attributes].sort((a, b) => a.sort_order - b.sort_order);
 
-  // WhatsApp inquiry — composes a message with the base bottle plus any selected
-  // cap / outer / inner and each item's chosen color (preset name or custom hex).
+  // WhatsApp inquiry — composes a message with the base product plus every
+  // selected part and its chosen color (preset name or custom hex). Parts are
+  // listed top-of-stack down, matching the on-page order.
   const WHATSAPP_NUMBER = '622112345678';
   const colorLabel = (isCustom: boolean, name: string, hex: string) =>
     isCustom ? hex.toUpperCase() : (name || (lang === 'id' ? 'Bawaan' : 'Default'));
   const buildQuoteMessage = () => {
     const colorWord = lang === 'id' ? 'Warna' : 'Color';
+    // A pot's base layer is its Body, not a bottle — label it for what it is.
+    const baseLabel = isPot
+      ? dict.catalog.compare.role_body
+      : (lang === 'id' ? 'Botol' : 'Bottle');
     const lines = [
       lang === 'id' ? 'Halo, saya tertarik dengan produk berikut:' : "Hi, I'm interested in the following product:",
       '',
-      `*${lang === 'id' ? 'Botol' : 'Bottle'}:* ${productName}`,
+      `*${baseLabel}:* ${productName}`,
       `${colorWord}: ${colorLabel(isCustomColor, selectedColorName, customColor)}`,
     ];
     for (const role of COMPAT_ROLES) {
@@ -651,7 +663,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
       if (!item) continue;
       lines.push(
         '',
-        `*${ROLE_LABELS[role][lang]}:* ${lang === 'id' ? item.name_id : item.name_en}`,
+        `*${slotLabel(dict.catalog.compare, role)}:* ${lang === 'id' ? item.name_id : item.name_en}`,
         `${colorWord}: ${colorLabel(isCustomCapColor[role], selectedCapColorName[role], capColor[role])}`,
       );
     }
@@ -718,7 +730,10 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                       bottleModelUrl={validGlbUrl(product.three_d_file_path)}
                       bottleColor={customColor}
                       bottleScale={1}
-                      layers={COMPAT_ROLES.flatMap((role) => {
+                      // Bottom-up: the viewer derives each layer's draw order from its
+                      // array position, so the stack must arrive in physical order
+                      // (Inner Pot → Inner Cap → Plug → Outer Cap).
+                      layers={SLOTS_BOTTOM_UP.flatMap(({ key: role }) => {
                         const item = selectedCompatItems[role];
                         if (!item) return [];
                         const preview = compatPreview[role];
@@ -764,7 +779,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                           onCustomColorChange: (hex) => setCapColor((prev) => ({ ...prev, [role]: hex })),
                           isCustom: isCustomCapColor[role],
                           onIsCustomChange: (v) => setIsCustomCapColor((prev) => ({ ...prev, [role]: v })),
-                          label: `${ROLE_LABELS[role][lang]} ${lang === 'id' ? 'Warna' : 'Color'}`,
+                          label: dict.catalog.compare.color_fmt.replace('{role}', slotLabel(dict.catalog.compare, role)),
                         }}
                         onOpenChange={setAnyPickerOpen}
                       />
@@ -781,7 +796,9 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
                     return (
                       <div key={role} className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
                         <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                          {lang === 'id' ? `Sesuaikan ${ROLE_LABELS[role].id}` : `Adjust ${ROLE_LABELS[role].en}`}
+                          {lang === 'id'
+                            ? `Sesuaikan ${slotLabel(dict.catalog.compare, role)}`
+                            : `Adjust ${slotLabel(dict.catalog.compare, role)}`}
                         </p>
                         <div>
                           <div className="flex items-center justify-between mb-1.5">

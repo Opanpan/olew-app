@@ -7,7 +7,9 @@ const STORAGE_KEY = 'olew_compare_list';
 // A single attached part (cap / outer pot / inner pot) snapshotted from the
 // product detail configurator, with everything the 3D viewer needs to replay it.
 export interface CompareLayer {
-  role: string;              // 'cap' | 'outer_pot' | 'inner_pot'
+  // An `AssemblySlot` key (see `./productAssembly`). Typed loosely because saved
+  // configs are persisted and may predate a change to the slot vocabulary.
+  role: string;
   name_en: string;
   name_id: string;
   url?: string;              // validated glb model

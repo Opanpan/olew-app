@@ -200,7 +200,11 @@ export interface CompatibleProduct {
   scale: number;
   min_position_vertical?: number | null;
   max_position_vertical?: number | null;
-  /** Mix-and-match slot this item occupies (e.g. "cap", "outer_pot", "inner_pot"). Null/absent = legacy, treated as "cap". */
+  /**
+   * Assembly slot this item occupies (see `./productAssembly`). The API does not
+   * actually return this — slots are derived from the linked product's own type
+   * — so treat it as advisory only and never depend on it being present.
+   */
   role?: string | null;
 }
 

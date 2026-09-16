@@ -16,6 +16,7 @@ import { productPath } from '@/lib/seo';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
 import { cn, validGlbUrl } from '@/lib/utils';
 import type { CompareConfig } from '@/lib/CompareContext';
+import { type AssemblySlot, SLOT_BY_KEY, SLOTS_TOP_DOWN } from '@/lib/productAssembly';
 
 const Product3DViewer = dynamic(
   () => import('@/components/catalog/detail/Product3DViewer'),
@@ -124,8 +125,12 @@ function CompareContent() {
   // Config (base colour + attached parts) snapshotted when the product was added
   // from the detail configurator; keyed by product id in the persisted list.
   const configFor = (id: string): CompareConfig | undefined => list.find(i => i.id === id)?.config;
-  const roleLabel = (role: string): string =>
-    role === 'outer_pot' ? c.role_outer_pot : role === 'inner_pot' ? c.role_inner_pot : c.role_cap;
+  // Saved configs may predate a slot rename, so fall back to the generic Cap
+  // label for any role key the current vocabulary no longer knows about.
+  const roleLabel = (role: string): string => {
+    const slot = SLOT_BY_KEY[role as AssemblySlot];
+    return slot ? c[slot.dictKey] : c.role_cap;
+  };
 
   const rawIds = searchParams.get('ids') ?? '';
   const ids = rawIds.split(',').filter(Boolean);
@@ -192,7 +197,9 @@ function CompareContent() {
   // so the Configuration section only appears when someone configured a combo.
   const productConfigs = validProducts.map(p => configFor(p.id));
   const anyConfig = productConfigs.some(cfg => !!cfg);
-  const roleUnion = (['cap', 'outer_pot', 'inner_pot'] as const).filter(role =>
+  // Top-of-stack first, so the comparison rows read down the assembly in
+  // physical order (Outer Cap → Plug → Inner Cap → Inner Pot).
+  const roleUnion = SLOTS_TOP_DOWN.map(s => s.key).filter(role =>
     productConfigs.some(cfg => cfg?.layers.some(l => l.role === role))
   );
 
