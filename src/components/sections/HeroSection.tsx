@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useRe
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
@@ -55,7 +56,7 @@ function BottleMark({ className }: { className?: string }) {
 }
 
 export default function HeroSection() {
-  const { dict } = useLang();
+  const { lang, dict } = useLang();
   const reduced = useReducedMotion();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [banners, setBanners] = useState<BannerCarousel[]>([]);
@@ -157,14 +158,14 @@ export default function HeroSection() {
 
             <Reveal from="up" delay={0.62} className="mt-9 flex flex-wrap items-center gap-3">
               {/* Primary CTA: a sheen sweeps across on hover. */}
-              <a
-                href="#products"
+              <Link
+                href={`/${lang}/products`}
                 className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-primary-600 px-7 py-3.5 font-medium text-white shadow-lg shadow-primary-600/20 transition-colors hover:bg-primary-700"
               >
                 <span className="absolute inset-y-0 -left-full w-1/2 skew-x-[-20deg] bg-white/25 transition-all duration-700 group-hover:left-[130%] motion-reduce:hidden" />
                 <span className="relative">{dict.hero.cta_primary}</span>
                 <ArrowRight className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </a>
+              </Link>
               <a
                 href="#contact"
                 className="group inline-flex items-center gap-2 rounded-full border border-gray-300 px-7 py-3.5 font-medium text-gray-800 transition-colors hover:border-primary-500 hover:text-primary-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-primary-400 dark:hover:text-primary-300"
