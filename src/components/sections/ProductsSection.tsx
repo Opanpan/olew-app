@@ -1,10 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import { Droplet, Sparkles, Pill, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
+import SectionHeading from '@/components/shared/SectionHeading';
+import { Stagger } from '@/components/shared/motion';
 
 const productIcons = [Droplet, Sparkles, Pill, Droplet];
 const productGradients = [
@@ -49,41 +50,14 @@ export default function ProductsSection() {
   return (
     <section id="products" className="section-padding bg-white dark:bg-gray-900">
       <div className="container-custom mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6"
-          >
-            <Droplet className="w-4 h-4 text-primary-500" />
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">{dict.products.badge}</span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4"
-          >
-            {dict.products.title}
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
-          >
-            {dict.products.subtitle}
-          </motion.p>
-        </div>
-
+        <SectionHeading
+          index="03"
+          eyebrow={dict.products.badge}
+          title={dict.products.title}
+          lead={dict.products.subtitle}
+        />
         {/* Products Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" step={0.1}>
           {dict.products.items.map((product, index) => {
             const Icon = productIcons[index];
             // First and last cards span two columns so 4 cards fill the 3-col grid: [2+1] / [1+2]
@@ -91,14 +65,7 @@ export default function ProductsSection() {
             const bgImage = productBgImages[index];
 
             return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className={cn('group', isLarge && 'lg:col-span-2')}
-              >
+              <Stagger.Item key={index} className={cn('group', isLarge && 'lg:col-span-2')}>
                 <div
                   className={cn(
                     'relative h-full rounded-3xl overflow-hidden bg-gradient-to-br border border-gray-100 dark:border-gray-800 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2',
@@ -144,10 +111,10 @@ export default function ProductsSection() {
 
                   </div>
                 </div>
-              </motion.div>
+              </Stagger.Item>
             );
           })}
-        </div>
+        </Stagger>
       </div>
     </section>
   );

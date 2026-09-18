@@ -1,3 +1,4 @@
+import IntroCurtain from '@/components/shared/IntroCurtain';
 import HeroSection from '@/components/sections/HeroSection';
 import ShowcaseSection from '@/components/sections/ShowcaseSection';
 import VideoSection from '@/components/sections/VideoSection';
@@ -9,6 +10,7 @@ import CTASection from '@/components/sections/CTASection';
 export default function HomePage() {
   return (
     <>
+      <IntroCurtain />
       <HeroSection />
       <ShowcaseSection />
       <VideoSection />
