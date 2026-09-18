@@ -1,7 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { SearchX, PackageX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
 
 interface EmptyStateProps {
@@ -13,45 +12,19 @@ export default function EmptyState({ message, onClearFilters }: EmptyStateProps)
   const { dict } = useLang();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center py-20 px-4"
-    >
-      {/* Icon */}
-      <div className="relative mb-6">
-        <div className="absolute inset-0 bg-primary-500/20 blur-3xl rounded-full" />
-        <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-full p-8">
-          <SearchX className="w-16 h-16 text-gray-400 dark:text-gray-600" />
-        </div>
-      </div>
-
-      {/* Message */}
-      <h3 className="font-display text-2xl font-bold text-gray-900 dark:text-white mb-3 text-center">
-        No Products Found
-      </h3>
-      <p className="text-gray-600 dark:text-gray-400 text-center mb-8 max-w-md">
-        {message}
-      </p>
-
-      {/* Clear Filters Button */}
+    <div className="flex flex-col items-center rounded-md border border-dashed border-gray-300 px-6 py-16 text-center dark:border-gray-700">
+      <SearchX className="mb-4 h-8 w-8 text-gray-400" aria-hidden />
+      <h3 className="text-base font-semibold text-gray-900 dark:text-white">{dict.catalog.filters.no_results}</h3>
+      <p className="mt-1.5 max-w-sm text-sm text-gray-600 dark:text-gray-400">{message}</p>
       {onClearFilters && (
-        <button onClick={onClearFilters} className="btn-outline px-8 py-3">
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="mt-6 h-10 rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-800 hover:border-gray-500 dark:border-gray-700 dark:text-gray-200"
+        >
           {dict.catalog.filters.clear_all}
         </button>
       )}
-
-      {/* Suggestions */}
-      <div className="mt-12 text-sm text-gray-500 dark:text-gray-500 max-w-md">
-        <p className="font-semibold mb-2">Try:</p>
-        <ul className="space-y-1 list-disc list-inside">
-          <li>Adjusting your filter criteria</li>
-          <li>Clearing all filters</li>
-          <li>Using different search terms</li>
-          <li>Expanding price or dimension ranges</li>
-        </ul>
-      </div>
-    </motion.div>
+    </div>
   );
 }

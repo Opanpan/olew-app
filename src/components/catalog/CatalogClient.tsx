@@ -1,13 +1,16 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import type { ProductListItem, ProductFiltersData, AttributeDefinition } from '@/lib/publicApi';
-import { cn } from '@/lib/utils';
+import { buildFacets, matchesFilters, optionCounts, type ActiveFilters } from '@/lib/catalogFacets';
+import { useLang } from '@/lib/LangContext';
 import ApiFilterSidebar from './filters/ApiFilterSidebar';
+import AppliedFilters from './filters/AppliedFilters';
 import ApiProductGrid from './ApiProductGrid';
 import EmptyState from './EmptyState';
+import SelectMenu from '@/components/shared/SelectMenu';
 
 const PAGE_SIZE = 12;
 
@@ -34,211 +37,240 @@ export default function CatalogClient({
 }: CatalogClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { dict } = useLang();
+  const f = dict.catalog.filters;
 
   const search = searchParams.get('search') ?? '';
   const categoryId = searchParams.get('category_id') ?? '';
-  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const sortParam = searchParams.get('sort') ?? 'default';
 
   const [searchInput, setSearchInput] = useState(search);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Parse active attribute filters from URL: attr_material=PET,HDPE
-  const activeAttrs: Record<string, string[]> = {};
-  searchParams.forEach((value, key) => {
-    if (key.startsWith('attr_')) activeAttrs[key.slice(5)] = value.split(',').filter(Boolean);
-  });
+  useEffect(() => { setSearchInput(search); }, [search]);
 
-  // Parse active range filters from URL: range_diameter=30,60
-  const activeRanges: Record<string, [number, number]> = {};
-  searchParams.forEach((value, key) => {
-    if (key.startsWith('range_')) {
-      const parts = value.split(',').map(v => Math.round(Number(v)));
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        activeRanges[key.slice(6)] = [parts[0], parts[1]];
+  const categories = filterData?.categories ?? [];
+  const facets = useMemo(() => buildFacets(products, attrDefs, lang), [products, attrDefs, lang]);
+
+  // URL → filters. Values are validated against the current facets so stale or
+  // hand-edited params can't silently empty the grid.
+  // attr_material=PET&attr_material=HDPE · range_height=40,120
+  const filters = useMemo<ActiveFilters>(() => {
+    const attrs: ActiveFilters['attrs'] = {};
+    const ranges: ActiveFilters['ranges'] = {};
+    for (const facet of facets) {
+      if (facet.kind === 'options') {
+        const vals = searchParams.getAll(`attr_${facet.key}`).filter((v) => facet.options.includes(v));
+        if (vals.length) attrs[facet.key] = vals;
+      } else {
+        const [lo, hi] = (searchParams.get(`range_${facet.key}`) ?? '').split(',').map(Number);
+        if (!Number.isFinite(lo) || !Number.isFinite(hi)) continue;
+        const range: [number, number] = [Math.max(facet.min, lo), Math.min(facet.max, hi)];
+        if (range[0] > facet.min || range[1] < facet.max) ranges[facet.key] = range;
       }
     }
-  });
+    return { attrs, ranges };
+  }, [facets, searchParams]);
 
-  const push = useCallback((updates: Record<string, string | null>) => {
+  const activeCount =
+    (categoryId ? 1 : 0) +
+    Object.values(filters.attrs).reduce((n, v) => n + v.length, 0) +
+    Object.keys(filters.ranges).length;
+
+  // Filter changes replace the history entry so Back leaves the catalog
+  // instead of stepping through every checkbox click.
+  const navigate = useCallback((mutate: (params: URLSearchParams) => void, method: 'push' | 'replace' = 'replace') => {
     const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([k, v]) => {
-      if (!v) params.delete(k); else params.set(k, v);
-    });
-    params.delete('page');
-    router.push(`?${params.toString()}`, { scroll: false });
+    mutate(params);
+    const qs = params.toString();
+    router[method](qs ? `?${qs}` : '?', { scroll: false });
   }, [router, searchParams]);
 
   const handleSearch = useCallback((value: string) => {
     setSearchInput(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => push({ search: value || null }), 400);
-  }, [push]);
+    debounceRef.current = setTimeout(() => navigate((p) => {
+      if (value) p.set('search', value); else p.delete('search');
+      p.delete('page');
+    }), 400);
+  }, [navigate]);
 
-  const handleCategory = useCallback((id: string) =>
-    push({ category_id: categoryId === id ? null : id }), [categoryId, push]);
+  const handleCategory = useCallback((id: string | null) => navigate((p) => {
+    if (id) p.set('category_id', id); else p.delete('category_id');
+    p.delete('page');
+  }), [navigate]);
 
-  const handleAttr = useCallback((key: string, value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+  const handleToggleOption = useCallback((key: string, value: string) => navigate((p) => {
     const k = `attr_${key}`;
-    const cur = (params.get(k) ?? '').split(',').filter(Boolean);
-    const next = cur.includes(value) ? cur.filter(v => v !== value) : [...cur, value];
-    if (next.length === 0) params.delete(k); else params.set(k, next.join(','));
-    params.delete('page');
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+    const cur = p.getAll(k);
+    p.delete(k);
+    (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]).forEach((v) => p.append(k, v));
+    p.delete('page');
+  }), [navigate]);
 
-  const handleRange = useCallback((key: string, range: [number, number]) =>
-    push({ [`range_${key}`]: range.join(',') }), [push]);
+  const handleRange = useCallback((key: string, range: [number, number]) => navigate((p) => {
+    const facet = facets.find((x) => x.key === key);
+    const isFull = facet?.kind === 'range' && range[0] <= facet.min && range[1] >= facet.max;
+    if (isFull) p.delete(`range_${key}`); else p.set(`range_${key}`, range.join(','));
+    p.delete('page');
+  }), [navigate, facets]);
 
-  const handleClear = useCallback(() => {
-    router.push('?', { scroll: false });
-    setSearchInput('');
-  }, [router]);
+  const handleRangeClear = useCallback((key: string) => navigate((p) => {
+    p.delete(`range_${key}`);
+    p.delete('page');
+  }), [navigate]);
 
-  const handlePage = useCallback((newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', String(newPage));
-    router.push(`?${params.toString()}`, { scroll: false });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [router, searchParams]);
-
-  // Client-side attribute filtering — now uses real attribute values from the API list response
-  const filtered = products.filter(p => {
-    const attrEntries = Object.entries(activeAttrs).filter(([, v]) => v.length > 0);
-    const passesAttrs = attrEntries.every(([key, vals]) => {
-      const attrValue = p.attributes?.[key]?.value;
-      // If the product has no data for this attribute key, exclude it only when
-      // strict filtering is desired; here we keep products missing the attribute
-      // so users don't get an empty list when attributes aren't fully populated yet.
-      if (!attrValue) return true;
-      return vals.includes(attrValue);
+  // Clears filters only — the search box and sort order are separate controls.
+  const handleClear = useCallback(() => navigate((p) => {
+    Array.from(p.keys()).forEach((k) => {
+      if (k.startsWith('attr_') || k.startsWith('range_') || k === 'category_id' || k === 'page') p.delete(k);
     });
-    if (!passesAttrs) return false;
+  }), [navigate]);
 
-    const rangeEntries = Object.entries(activeRanges);
-    return rangeEntries.every(([key, [lo, hi]]) => {
-      const rawValue = p.attributes?.[key]?.value;
-      const num = rawValue ? parseFloat(rawValue) : NaN;
-      // Same "keep if missing/unparseable" behavior as the categorical filters above.
-      if (Number.isNaN(num)) return true;
-      return num >= lo && num <= hi;
-    });
-  });
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
 
-  const sorted = [...filtered].sort((a, b) => {
-    const na = lang === 'id' ? a.name_id : a.name_en;
-    const nb = lang === 'id' ? b.name_id : b.name_en;
-    if (sortParam === 'name_asc') return na.localeCompare(nb);
-    if (sortParam === 'name_desc') return nb.localeCompare(na);
-    return 0;
-  });
+  const filtered = useMemo(() => products.filter((p) => matchesFilters(p, filters)), [products, filters]);
 
-  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const counts = useMemo(() => {
+    const out: Record<string, Record<string, number>> = {};
+    facets.forEach((facet) => { if (facet.kind === 'options') out[facet.key] = optionCounts(products, filters, facet); });
+    return out;
+  }, [products, filters, facets]);
+
+  const sorted = useMemo(() => {
+    if (sortParam !== 'name_asc' && sortParam !== 'name_desc') return filtered;
+    const name = (p: ProductListItem) => (lang === 'id' ? p.name_id : p.name_en);
+    const dir = sortParam === 'name_asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => dir * name(a).localeCompare(name(b), undefined, { numeric: true }));
+  }, [filtered, sortParam, lang]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const page = Math.min(totalPages, Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1));
   const pageProducts = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const handlePage = useCallback((newPage: number) => {
+    navigate((p) => p.set('page', String(newPage)), 'push');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [navigate]);
+
+  const pageButton = 'flex h-10 items-center gap-1.5 rounded-md border px-3.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 border-gray-300 text-gray-800 enabled:hover:border-gray-500 dark:border-gray-700 dark:text-gray-200';
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
       <ApiFilterSidebar
-        filterData={filterData}
-        attrDefs={attrDefs}
-        lang={lang}
+        facets={facets}
+        categories={categories}
         categoryId={categoryId}
-        activeAttrs={activeAttrs}
-        activeRanges={activeRanges}
+        filters={filters}
+        counts={counts}
+        resultCount={sorted.length}
+        activeCount={activeCount}
+        lang={lang}
+        mobileOpen={mobileOpen}
+        onMobileClose={closeMobile}
         onCategoryChange={handleCategory}
-        onAttrChange={handleAttr}
+        onToggleOption={handleToggleOption}
         onRangeChange={handleRange}
         onClearAll={handleClear}
       />
 
       <div className="flex-1 min-w-0">
         {/* Search + sort bar */}
-        <div className="flex flex-col gap-3 md:gap-4 mb-6">
+        <div className="mb-4 flex flex-col gap-3">
           <div className="relative w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
             <input
-              type="text"
+              type="search"
               value={searchInput}
-              onChange={e => handleSearch(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               placeholder={searchPlaceholder}
-              className={cn(
-                'w-full pl-11 pr-10 py-3 rounded-xl',
-                'bg-white dark:bg-gray-900',
-                'border border-gray-200 dark:border-gray-700',
-                'text-sm text-gray-900 dark:text-white placeholder-gray-400',
-                'focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500',
-                'transition-all duration-200'
-              )}
+              aria-label={searchPlaceholder}
+              className="h-11 w-full rounded-md border border-gray-300 bg-white pl-10 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600 dark:border-gray-700 dark:bg-gray-900 dark:text-white [&::-webkit-search-cancel-button]:appearance-none"
             />
             {searchInput && (
               <button
+                type="button"
                 onClick={() => handleSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label={f.clear_all}
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                <X className="w-3.5 h-3.5 text-gray-400" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {showingLabel}{' '}
-              <span className="font-semibold text-gray-900 dark:text-white">{sorted.length}</span>{' '}
-              {resultsLabel}
-            </p>
-            <select
-              value={sortParam}
-              onChange={e => push({ sort: e.target.value === 'default' ? null : e.target.value })}
-              className="px-3 py-2 rounded-xl text-sm border bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500/50 cursor-pointer transition-all"
-            >
-              <option value="default">Default</option>
-              <option value="name_asc">Name A-Z</option>
-              <option value="name_desc">Name Z-A</option>
-            </select>
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="lg:hidden inline-flex h-10 items-center gap-2 rounded-md border border-gray-300 px-3.5 text-sm font-medium text-gray-800 dark:border-gray-700 dark:text-gray-200"
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                {f.filters_button}
+                {activeCount > 0 && <span className="tabular-nums text-primary-700 dark:text-primary-300">({activeCount})</span>}
+              </button>
+              <p className="hidden text-sm text-gray-600 dark:text-gray-400 sm:block" aria-live="polite">
+                {showingLabel}{' '}
+                <span className="font-medium tabular-nums text-gray-900 dark:text-white">{sorted.length}</span> {resultsLabel}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="hidden text-sm text-gray-600 dark:text-gray-400 sm:inline" aria-hidden>{f.sort_by}</span>
+              <SelectMenu
+                label={f.sort_by}
+                value={sortParam}
+                options={[
+                  { value: 'default', label: f.sort_default },
+                  { value: 'name_asc', label: f.sort_name_asc },
+                  { value: 'name_desc', label: f.sort_name_desc },
+                ]}
+                onChange={(value) => navigate((p) => {
+                  if (value === 'default') p.delete('sort'); else p.set('sort', value);
+                  p.delete('page');
+                })}
+                className="w-36 sm:w-40"
+              />
+            </div>
           </div>
+          {/* Phones: the count gets its own line so the toolbar row never overflows
+              (Indonesian labels are long enough to push the page sideways at 320px). */}
+          <p className="text-sm text-gray-600 dark:text-gray-400 sm:hidden">
+            <span className="font-medium tabular-nums text-gray-900 dark:text-white">{sorted.length}</span> {resultsLabel}
+          </p>
         </div>
 
-        {/* Grid or empty */}
+        <AppliedFilters
+          facets={facets}
+          categories={categories}
+          categoryId={categoryId}
+          filters={filters}
+          lang={lang}
+          onCategoryChange={handleCategory}
+          onToggleOption={handleToggleOption}
+          onRangeClear={handleRangeClear}
+          onClearAll={handleClear}
+        />
+
         {pageProducts.length === 0 ? (
-          <EmptyState message={emptyMessage} onClearFilters={handleClear} />
+          <EmptyState message={emptyMessage} onClearFilters={activeCount > 0 ? handleClear : undefined} />
         ) : (
           <ApiProductGrid products={pageProducts} lang={lang} />
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-3 pt-6">
-            <button
-              onClick={() => handlePage(page - 1)}
-              disabled={page <= 1}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all',
-                page <= 1
-                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
-                  : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:text-primary-600'
-              )}
-            >
-              <ChevronLeft className="w-4 h-4" /> Previous
+          <nav className="flex items-center justify-center gap-3 pt-8">
+            <button type="button" onClick={() => handlePage(page - 1)} disabled={page <= 1} aria-label={f.previous} className={pageButton}>
+              <ChevronLeft className="h-4 w-4" aria-hidden /> <span className="hidden sm:inline">{f.previous}</span>
             </button>
-            <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
-              Page <span className="font-semibold text-gray-900 dark:text-white">{page}</span>
-              {' '}of{' '}
-              <span className="font-semibold text-gray-900 dark:text-white">{totalPages}</span>
+            <span className="px-2 text-sm tabular-nums text-gray-600 dark:text-gray-400">
+              {f.page_of.replace('{page}', String(page)).replace('{total}', String(totalPages))}
             </span>
-            <button
-              onClick={() => handlePage(page + 1)}
-              disabled={page >= totalPages}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all',
-                page >= totalPages
-                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
-                  : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:text-primary-600'
-              )}
-            >
-              Next <ChevronRight className="w-4 h-4" />
+            <button type="button" onClick={() => handlePage(page + 1)} disabled={page >= totalPages} aria-label={f.next} className={pageButton}>
+              <span className="hidden sm:inline">{f.next}</span> <ChevronRight className="h-4 w-4" aria-hidden />
             </button>
-          </div>
+          </nav>
         )}
       </div>
     </div>

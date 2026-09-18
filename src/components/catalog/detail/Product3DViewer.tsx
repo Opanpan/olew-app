@@ -1,27 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { TrackballControls, Environment, useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, Loader2, Palette, Check, X, Droplets } from 'lucide-react';
-import { HexColorPicker } from 'react-colorful';
+import { RotateCcw, Loader2 } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
 import { cn } from '@/lib/utils';
-import { colorClassMap } from './EnhancedColorPicker';
-
-export interface ColorConfig {
-  colors: string[];
-  selectedColor: string;
-  onColorChange: (color: string) => void;
-  customColor: string;
-  onCustomColorChange: (hex: string) => void;
-  isCustom: boolean;
-  onIsCustomChange: (isCustom: boolean) => void;
-  label: string;
-}
 
 // A single attached part (cap, outer pot, inner pot, ...) stacked on top of the
 // base model. Every layer anchors off the same base bottleHeight independently
@@ -121,8 +106,37 @@ function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY
     // sorts by camera distance and coincident surfaces flicker while orbiting.
     child.renderOrder = renderOrder;
   });
+
+  // Ease toward the target height instead of jumping, so separating/reassembling
+  // parts (and dragging the height slider) reads as motion. `damp` is frame-rate
+  // independent. Position is deliberately NOT a JSX prop: React would re-apply it
+  // on every render and snap the part to the target, cancelling the animation.
+  const groupRef = useRef<THREE.Group>(null);
+  const targetY = bottleHeight + positionY;
+  // A newly mounted part starts in place rather than flying in from the origin.
+  useLayoutEffect(() => {
+    groupRef.current?.position.set(positionX, targetY, positionZ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const reduceMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
+  useFrame((_, delta) => {
+    const g = groupRef.current;
+    if (!g) return;
+    g.position.x = positionX;
+    g.position.z = positionZ;
+    if (reduceMotion) {
+      g.position.y = targetY;
+      return;
+    }
+    const y = THREE.MathUtils.damp(g.position.y, targetY, 7, delta);
+    g.position.y = Math.abs(y - targetY) < 0.0005 ? targetY : y;
+  });
+
   return (
-    <group position={[positionX, bottleHeight + positionY, positionZ]}>
+    <group ref={groupRef}>
       <primitive object={scene} scale={scale} />
     </group>
   );
@@ -152,7 +166,7 @@ function ModelLoadingOverlay() {
   const { active, progress } = useProgress();
   if (!active) return null;
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl md:rounded-3xl">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-100/90 dark:bg-gray-900/90">
       <div className="w-40 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400 mx-auto mb-3" />
         <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-2">
@@ -172,289 +186,9 @@ function ModelLoadingOverlay() {
 function ModelUnavailable() {
   const { dict } = useLang();
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-2xl md:rounded-3xl">
+    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-900">
       <p className="text-xs text-gray-400 dark:text-gray-500">{dict.catalog.product_detail.model_unavailable}</p>
     </div>
-  );
-}
-
-// ─── Color Picker Portal (modal on desktop, drawer on mobile) ─────────────────
-
-interface ColorPickerPortalProps {
-  isOpen: boolean;
-  onApply: () => void;
-  onCancel: () => void;
-  config: ColorConfig;
-}
-
-function ColorPickerPortal({ isOpen, onApply, onCancel, config }: ColorPickerPortalProps) {
-  const { dict } = useLang();
-  const d = dict.catalog.product_detail;
-  const [mounted, setMounted] = useState(false);
-  const [hexInput, setHexInput] = useState(config.customColor || '#ffffff');
-
-  useEffect(() => { setMounted(true); }, []);
-
-  // Sync local hex input when modal opens (not on every customColor change)
-  useEffect(() => {
-    if (isOpen) setHexInput(config.customColor || '#ffffff');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-
-  // Lock body scroll when open
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
-
-  const handleHexChange = (hex: string) => {
-    setHexInput(hex);
-    // Live preview on the 3D model — will be reverted on cancel
-    config.onCustomColorChange(hex);
-    config.onIsCustomChange(true);
-  };
-
-  const handleTextInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let v = e.target.value;
-    if (!v.startsWith('#')) v = '#' + v;
-    setHexInput(v);
-    if (/^#([0-9A-F]{3}){1,2}$/i.test(v)) {
-      config.onCustomColorChange(v);
-      config.onIsCustomChange(true);
-    }
-  };
-
-  const pickerContent = (
-    <div className="space-y-4">
-      {/* Color wheel */}
-      <HexColorPicker
-        color={hexInput}
-        onChange={handleHexChange}
-        style={{ width: '100%', height: '180px' }}
-      />
-
-      {/* Hex input row */}
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl border-2 border-gray-200 dark:border-gray-700 flex-shrink-0 shadow-inner"
-          style={{ backgroundColor: hexInput }}
-        />
-        <input
-          type="text"
-          value={hexInput}
-          onChange={handleTextInput}
-          maxLength={7}
-          placeholder="#ffffff"
-          className="flex-1 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-        />
-      </div>
-
-      {/* Preset swatches for quick pick */}
-      <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">{d.quick_pick}</p>
-        <div className="flex flex-wrap gap-2">
-          {config.colors.map((color) => {
-            const isSelected = !config.isCustom && config.selectedColor === color;
-            return (
-              <motion.button
-                key={color}
-                whileHover={{ scale: 1.12 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => {
-                  config.onColorChange(color);
-                  config.onIsCustomChange(false);
-                }}
-                title={color}
-                className={cn(
-                  'w-8 h-8 rounded-full shadow-md transition-all flex items-center justify-center',
-                  colorClassMap[color] || 'bg-gray-400',
-                  isSelected
-                    ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 scale-110'
-                    : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-600'
-                )}
-              >
-                {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow" strokeWidth={3} />}
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Apply */}
-      <button
-        onClick={onApply}
-        className="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
-      >
-        {d.apply_color}
-      </button>
-    </div>
-  );
-
-  if (!mounted) return null;
-
-  return createPortal(
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[200] bg-black/50"
-            onClick={onCancel}
-          />
-
-          {/* Single responsive modal — bottom sheet on mobile, centered on desktop */}
-          <div className="fixed inset-0 z-[201] flex items-end md:items-center justify-center pointer-events-none">
-            <motion.div
-              key="modal"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="pointer-events-auto w-full md:w-[340px] rounded-t-3xl md:rounded-2xl bg-white dark:bg-gray-900 border-t md:border border-gray-200 dark:border-gray-800 shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Mobile drag handle */}
-              <div className="flex justify-center pt-3 pb-1 md:hidden">
-                <div className="w-10 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700" />
-              </div>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-950/50 flex items-center justify-center">
-                    <Droplets className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">{d.custom_color}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{config.label}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={onCancel}
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-
-              {/* Body — single picker instance */}
-              <div className="p-5" style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}>
-                {pickerContent}
-              </div>
-            </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body
-  );
-}
-
-// ─── Color Swatch Panel (overlay inside viewer) ───────────────────────────────
-
-export function ColorSwatchPanel({ config, onOpenChange }: { config: ColorConfig; onOpenChange?: (open: boolean) => void }) {
-  const [showPicker, setShowPicker] = useState(false);
-  const snapshot = useRef<{ selectedColor: string; customColor: string; isCustom: boolean } | null>(null);
-
-  const openPicker = () => { setShowPicker(true); onOpenChange?.(true); };
-  const closePicker = () => { setShowPicker(false); onOpenChange?.(false); };
-
-  const handleOpen = () => {
-    snapshot.current = {
-      selectedColor: config.selectedColor,
-      customColor: config.customColor,
-      isCustom: config.isCustom,
-    };
-    openPicker();
-  };
-
-  const handleApply = () => {
-    snapshot.current = null;
-    closePicker();
-  };
-
-  const handleCancel = () => {
-    if (snapshot.current) {
-      config.onColorChange(snapshot.current.selectedColor);
-      config.onCustomColorChange(snapshot.current.customColor);
-      config.onIsCustomChange(snapshot.current.isCustom);
-      snapshot.current = null;
-    }
-    closePicker();
-  };
-
-  return (
-    <>
-      <ColorPickerPortal
-        isOpen={showPicker}
-        onApply={handleApply}
-        onCancel={handleCancel}
-        config={config}
-      />
-
-      {/* Frosted pill */}
-      <div className="backdrop-blur-md bg-black/55 border border-white/10 rounded-2xl px-3 py-2.5 shadow-xl">
-        <p className="text-[9px] uppercase tracking-widest text-white/45 mb-2 font-semibold select-none">
-          {config.label}
-        </p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {config.colors.map((color) => {
-            const isSelected = !config.isCustom && config.selectedColor === color;
-            return (
-              <motion.button
-                key={color}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.88 }}
-                onClick={() => {
-                  config.onColorChange(color);
-                  config.onIsCustomChange(false);
-                }}
-                title={color}
-                className={cn(
-                  'w-6 h-6 rounded-full flex-shrink-0 shadow-md transition-shadow flex items-center justify-center',
-                  colorClassMap[color] || 'bg-gray-400',
-                  isSelected
-                    ? 'ring-2 ring-white ring-offset-[1.5px] ring-offset-black/40 shadow-lg'
-                    : 'hover:ring-1 hover:ring-white/60 hover:shadow-lg'
-                )}
-              >
-                {isSelected && (
-                  <Check className="w-2.5 h-2.5 text-white drop-shadow-md" strokeWidth={3} />
-                )}
-              </motion.button>
-            );
-          })}
-
-          {/* Custom color button */}
-          <motion.button
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.88 }}
-            onClick={handleOpen}
-            title="Custom color"
-            className={cn(
-              'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-all',
-              config.isCustom
-                ? 'ring-2 ring-white ring-offset-[1.5px] ring-offset-black/40 shadow-lg'
-                : 'bg-white/20 hover:bg-white/35'
-            )}
-            style={config.isCustom ? { backgroundColor: config.customColor } : {}}
-          >
-            <Palette className="w-3 h-3 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]" />
-          </motion.button>
-        </div>
-
-        {config.isCustom && (
-          <p className="text-[9px] font-mono text-white/50 mt-1.5 tracking-wider">
-            {config.customColor.toUpperCase()}
-          </p>
-        )}
-      </div>
-    </>
   );
 }
 
@@ -477,33 +211,28 @@ export default function Product3DViewer({
   return (
     <div
       className={cn(
-        'relative w-full aspect-square rounded-2xl md:rounded-3xl overflow-hidden',
+        'relative w-full aspect-square overflow-hidden',
         // compact viewers (compare page) stay transparent so they blend into the
-        // card; the standalone viewer keeps its subtle backdrop
-        !compact && 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900'
+        // card; the standalone viewer sits on a flat studio-grey backdrop
+        !compact && 'rounded-md bg-gray-100 dark:bg-gray-900'
       )}
       style={{ touchAction: 'none' }}
     >
-      {/* Reset Camera Button */}
       {!compact && (
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
+          type="button"
           onClick={() => setResetKey((p) => p + 1)}
-          className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all"
+          aria-label={dict.catalog.product_detail.reset_camera}
           title={dict.catalog.product_detail.reset_camera}
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
         >
-          <RotateCcw className="w-5 h-5 text-gray-900 dark:text-white" />
-        </motion.button>
+          <RotateCcw className="h-4 w-4" />
+        </button>
       )}
-
-      {/* Instructions */}
       {!compact && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm transition-all">
-          <p className="text-xs text-white font-medium whitespace-nowrap">
-            {dict.catalog.product_detail.drag_to_rotate}
-          </p>
-        </div>
+        <p className="pointer-events-none absolute bottom-3 right-3 z-10 text-xs text-gray-500 dark:text-gray-400">
+          {dict.catalog.product_detail.drag_to_rotate}
+        </p>
       )}
 
       {/* 3D Canvas */}

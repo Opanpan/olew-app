@@ -1,117 +1,102 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeftRight, X, Package, ChevronRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCompare, type CompareItem } from '@/lib/CompareContext';
 import { useLang } from '@/lib/LangContext';
-import ImgWithFallback from '@/components/shared/ImgWithFallback';
+import ImgWithFallback, { PRODUCT_PLACEHOLDER } from '@/components/shared/ImgWithFallback';
 
 export default function CompareBar() {
   const { list, remove, clear, count, max } = useCompare();
   const { lang, dict } = useLang();
   const router = useRouter();
+  const pathname = usePathname();
   const c = dict.catalog.compare;
+  const ready = count >= 2;
+  // The compare page is the bar's destination — showing "Compare Now" there is noise.
+  const onComparePage = /\/compare\/?$/.test(pathname ?? '');
 
   const handleCompare = () => {
-    const ids = list.map(p => p.id).join(',');
+    const ids = list.map((p) => p.id).join(',');
     router.push(`/${lang}/compare?ids=${ids}`);
   };
 
-  const barText = c.bar_count
-    .replace('{count}', String(count))
-    .replace('{max}', String(max));
-
   return (
     <AnimatePresence>
-      {count > 0 && (
+      {count > 0 && !onComparePage && (
         <motion.div
-          initial={{ y: 120, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 120, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none"
+          role="region"
+          aria-label={c.page_title}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'tween', duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950"
         >
-          <div className="pointer-events-auto mx-auto max-w-7xl px-4 pb-4 pt-2">
-            <div className="relative rounded-2xl overflow-hidden border border-white/20 dark:border-gray-700/50 shadow-2xl shadow-black/25">
-              <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/90 backdrop-blur-xl" />
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-500 via-sky-400 to-primary-600" />
+          <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:gap-4 md:px-6" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+            <div className="hidden shrink-0 sm:block">
+              <p className="text-sm font-medium text-gray-900 dark:text-white tabular-nums">
+                {c.bar_count.replace('{count}', String(count)).replace('{max}', String(max))}
+              </p>
+              {!ready && <p className="text-xs text-gray-500 dark:text-gray-400">{c.min_hint}</p>}
+            </div>
 
-              <div className="relative px-4 py-3 md:px-6 md:py-4 flex items-center gap-3 md:gap-4">
-                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-100 dark:bg-primary-900/40 border border-primary-200 dark:border-primary-800">
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-                    <span className="text-xs font-bold text-primary-700 dark:text-primary-300">{barText}</span>
-                  </div>
-                </div>
-
-                {/* Product slots */}
-                <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-                  {list.map((product: CompareItem) => {
-                    const name = lang === 'id' ? product.name_id : product.name_en;
-                    return (
-                      <motion.div
-                        key={product.id}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        className="flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-sky-50 dark:from-primary-900/30 dark:to-sky-900/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {product.thumbnail ? (
-                            <ImgWithFallback
-                              src={product.thumbnail}
-                              alt={name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Package className="w-4 h-4 text-primary-500" />
-                          )}
-                        </div>
-                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 max-w-[100px] truncate hidden md:block">
-                          {name}
-                        </span>
-                        <button
-                          onClick={() => remove(product.id)}
-                          className="w-4 h-4 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors flex-shrink-0"
-                          aria-label={`Remove ${name}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </motion.div>
-                    );
-                  })}
-
-                  {/* Empty slots */}
-                  {Array.from({ length: max - count }).map((_, i) => (
-                    <div key={`slot-${i}`} className="flex-shrink-0 w-8 h-8 md:w-[140px] md:h-11 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 hidden md:flex items-center justify-center">
-                      <span className="text-[10px] text-gray-400 hidden md:block">+ add</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={clear} className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-medium hidden sm:block">
-                    {c.clear_all}
-                  </button>
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleCompare}
-                    disabled={count < 2}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                      count >= 2
-                        ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    }`}
+            <ul className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide">
+              {list.map((product: CompareItem) => {
+                const name = lang === 'id' ? product.name_id : product.name_en;
+                return (
+                  <li
+                    key={product.id}
+                    className="flex h-12 min-w-0 shrink-0 items-center gap-2 rounded-md border border-gray-200 pl-1 pr-0.5 dark:border-gray-800 md:w-48 md:shrink"
                   >
-                    <ArrowLeftRight className="w-4 h-4" />
-                    <span className="hidden sm:inline">{c.compare_now}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </motion.button>
-                </div>
-              </div>
+                    <ImgWithFallback
+                      src={product.thumbnail}
+                      alt=""
+                      fallback={PRODUCT_PLACEHOLDER}
+                      className="h-10 w-10 shrink-0 rounded object-cover bg-gray-100 dark:bg-gray-800"
+                    />
+                    <span className="hidden min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200 md:block" title={name}>
+                      {name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => remove(product.id)}
+                      aria-label={`${c.remove} ${name}`}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </li>
+                );
+              })}
+              {Array.from({ length: max - count }).map((_, i) => (
+                <li
+                  key={`slot-${i}`}
+                  aria-hidden
+                  className="hidden h-12 w-48 shrink rounded-md border border-dashed border-gray-300 dark:border-gray-700 md:block"
+                />
+              ))}
+            </ul>
+
+            <div className="flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={clear}
+                className="hidden text-sm text-gray-600 underline-offset-4 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-white sm:block"
+              >
+                {c.clear_all}
+              </button>
+              <button
+                type="button"
+                onClick={handleCompare}
+                disabled={!ready}
+                title={ready ? undefined : c.min_hint}
+                className="h-10 whitespace-nowrap rounded-md bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
+              >
+                {c.compare_now}
+                <span className="ml-1 tabular-nums sm:hidden">({count})</span>
+              </button>
             </div>
           </div>
         </motion.div>
