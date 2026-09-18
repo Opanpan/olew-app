@@ -1,15 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useReducedMotion } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
 import { getBannerCarousels, type BannerCarousel } from '@/lib/publicApi';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
+import { EASE, Reveal, WordReveal } from '@/components/shared/motion';
+
+const AUTOPLAY_MS = 6000;
 
 const fallbackSlides = [
   { id: 1, titleKey: 'slide1_title', descKey: 'slide1_desc', gradient: 'from-blue-600 via-sky-500 to-cyan-500' },
@@ -24,13 +28,42 @@ const gradients = [
   'from-emerald-500 via-teal-500 to-cyan-600',
 ];
 
+const STATS = [
+  { value: 500, suffix: '+', label: 'Products' },
+  { value: 100, suffix: '+', label: 'Clients' },
+  { value: 15, suffix: '+', label: 'Years' },
+];
+
+/** Outline bottle used when no banner images are configured. */
+function BottleMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 140 320" className={className} fill="none" aria-hidden>
+      <rect x="45" y="8" width="50" height="25" rx="4" fill="rgba(255,255,255,0.95)" />
+      <rect x="50" y="33" width="40" height="12" rx="2" fill="rgba(255,255,255,0.75)" />
+      <path
+        d="M50 45 L50 75 Q38 85 38 100 L38 285 Q38 305 58 305 L82 305 Q102 305 102 285 L102 100 Q102 85 90 75 L90 45"
+        fill="rgba(255,255,255,0.3)"
+        stroke="rgba(255,255,255,0.5)"
+        strokeWidth="2"
+      />
+      <path d="M40 140 L40 280 Q40 298 58 298 L82 298 Q100 298 100 280 L100 140 Q70 160 40 140" fill="rgba(255,255,255,0.2)" />
+      <rect x="48" y="170" width="44" height="70" rx="3" fill="rgba(255,255,255,0.35)" />
+      <text x="70" y="210" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">
+        OLEW
+      </text>
+    </svg>
+  );
+}
+
 export default function HeroSection() {
-  const { dict } = useLang();
+  const { lang, dict } = useLang();
+  const reduced = useReducedMotion();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [banners, setBanners] = useState<BannerCarousel[]>([]);
+  const frameRef = useRef<HTMLDivElement>(null);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
-    Autoplay({ delay: 5000, stopOnInteraction: false }),
+    Autoplay({ delay: AUTOPLAY_MS, stopOnInteraction: false }),
   ]);
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
@@ -45,208 +78,301 @@ export default function HeroSection() {
     getBannerCarousels().then(setBanners);
   }, []);
 
+  // Pointer parallax on the carousel frame. Springs keep it from feeling twitchy,
+  // and it is disabled outright for reduced-motion visitors.
+  const px = useMotionValue(0);
+  const py = useMotionValue(0);
+  const rotateX = useSpring(useTransform(py, [-0.5, 0.5], ['6deg', '-6deg']), { stiffness: 120, damping: 18 });
+  const rotateY = useSpring(useTransform(px, [-0.5, 0.5], ['-7deg', '7deg']), { stiffness: 120, damping: 18 });
+
+  const handlePointer = (e: React.PointerEvent) => {
+    if (reduced) return;
+    const box = frameRef.current?.getBoundingClientRect();
+    if (!box) return;
+    px.set((e.clientX - box.left) / box.width - 0.5);
+    py.set((e.clientY - box.top) / box.height - 0.5);
+  };
+  const resetPointer = () => {
+    px.set(0);
+    py.set(0);
+  };
+
   const slideCount = banners.length > 0 ? banners.length : fallbackSlides.length;
+  const titleWords = dict.hero.title.split(' ');
+  const accentFrom = Math.max(titleWords.length - 2, 0);
 
   return (
-    <section id="home" className="relative min-h-screen flex items-center overflow-hidden pt-20">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-black">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" />
+    <section id="home" className="relative flex min-h-screen items-center overflow-hidden pt-24 md:pt-28">
+      {/* ── Background: a calm base wash, two slow-drifting lights, and a hairline
+          grid that fades out toward the edges. ─────────────────────────────── */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-white via-primary-50/40 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+        <motion.div
+          className="absolute -left-40 top-[-10%] h-[38rem] w-[38rem] rounded-full bg-primary-400/20 blur-[120px] dark:bg-primary-600/20"
+          animate={reduced ? undefined : { x: [0, 60, 0], y: [0, 40, 0] }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute -right-32 bottom-[-15%] h-[30rem] w-[30rem] rounded-full bg-amber-300/20 blur-[110px] dark:bg-amber-500/10"
+          animate={reduced ? undefined : { x: [0, -50, 0], y: [0, -30, 0] }}
+          transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.18] dark:opacity-[0.12]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, rgb(148 163 184 / 0.35) 1px, transparent 1px), linear-gradient(to bottom, rgb(148 163 184 / 0.35) 1px, transparent 1px)',
+            backgroundSize: '72px 72px',
+            maskImage: 'radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 75%)',
+          }}
+        />
       </div>
 
-      <div className="relative container-custom mx-auto px-4 md:px-8 py-12">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Content */}
+      <div className="container-custom relative mx-auto px-4 py-12 md:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
+          {/* ── Copy ───────────────────────────────────────────────────────── */}
           <div className="order-2 lg:order-1">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, ease: EASE }}
+              className="flex items-center gap-3"
             >
-              <Sparkles className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+              <span className="h-px w-10 bg-primary-500/50" />
+              <span className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">
                 {dict.hero.badge}
               </span>
             </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
-            >
-              <span className="text-gray-900 dark:text-white">
-                {dict.hero.title.split(' ').slice(0, -2).join(' ')}
-              </span>{' '}
-              <span className="gradient-text">
-                {dict.hero.title.split(' ').slice(-2).join(' ')}
-              </span>
-            </motion.h1>
+            <WordReveal
+              as="h1"
+              text={dict.hero.title}
+              delay={0.15}
+              accentFrom={accentFrom}
+              className="font-display mt-6 text-[2.6rem] font-bold leading-[1.05] tracking-tight text-gray-900 dark:text-white sm:text-5xl lg:text-[4rem]"
+            />
 
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-8 max-w-xl"
-            >
-              {dict.hero.subtitle}
-            </motion.p>
+            <Reveal from="up" delay={0.5} className="mt-6 max-w-xl">
+              <p className="text-lg leading-relaxed text-gray-600 dark:text-gray-300">{dict.hero.subtitle}</p>
+            </Reveal>
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-wrap gap-4"
-            >
-              <a href="#products" className="btn-primary flex items-center gap-2">
-                {dict.hero.cta_primary}
-                <ArrowRight className="w-5 h-5" />
-              </a>
-              <a href="#contact" className="btn-outline">
+            <Reveal from="up" delay={0.62} className="mt-9 flex flex-wrap items-center gap-3">
+              {/* Primary CTA: a sheen sweeps across on hover. */}
+              <Link
+                href={`/${lang}/products`}
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-primary-600 px-7 py-3.5 font-medium text-white shadow-lg shadow-primary-600/20 transition-colors hover:bg-primary-700"
+              >
+                <span className="absolute inset-y-0 -left-full w-1/2 skew-x-[-20deg] bg-white/25 transition-all duration-700 group-hover:left-[130%] motion-reduce:hidden" />
+                <span className="relative">{dict.hero.cta_primary}</span>
+                <ArrowRight className="relative h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+              <a
+                href="#contact"
+                className="group inline-flex items-center gap-2 rounded-full border border-gray-300 px-7 py-3.5 font-medium text-gray-800 transition-colors hover:border-primary-500 hover:text-primary-700 dark:border-gray-700 dark:text-gray-200 dark:hover:border-primary-400 dark:hover:text-primary-300"
+              >
                 {dict.hero.cta_secondary}
+                <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </a>
-            </motion.div>
+            </Reveal>
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex gap-8 mt-10 pt-10 border-t border-gray-200 dark:border-gray-800"
-            >
-              {[
-                { value: '500+', label: 'Products' },
-                { value: '100+', label: 'Clients' },
-                { value: '15+', label: 'Years' },
-              ].map((stat) => {
-                const match = stat.value.match(/^(\d+)(\+)?$/);
-                return (
-                  <div key={stat.label}>
-                    <div className="font-display text-3xl font-bold text-primary-600 dark:text-primary-400">
-                      {match ? (
-                        <CountUp end={parseInt(match[1], 10)} suffix={match[2] || ''} duration={2500} />
-                      ) : (
-                        stat.value
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{stat.label}</div>
+            <Reveal from="up" delay={0.74} className="mt-12">
+              <dl className="flex divide-x divide-gray-200 dark:divide-gray-800">
+                {STATS.map((stat, i) => (
+                  <div key={stat.label} className={cn('pr-8', i > 0 && 'pl-8')}>
+                    <dt className="sr-only">{stat.label}</dt>
+                    <dd className="font-display text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">
+                      <CountUp end={stat.value} suffix={stat.suffix} duration={2200} />
+                    </dd>
+                    <dd className="mt-1 text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+                      {stat.label}
+                    </dd>
                   </div>
-                );
-              })}
-            </motion.div>
+                ))}
+              </dl>
+            </Reveal>
           </div>
 
-          {/* Carousel */}
+          {/* ── Carousel ───────────────────────────────────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 0.2, ease: EASE }}
             className="order-1 lg:order-2"
+            style={{ perspective: 1200 }}
           >
-            <div className="relative">
-              <div className="overflow-hidden rounded-3xl" ref={emblaRef}>
+            <motion.div
+              ref={frameRef}
+              onPointerMove={handlePointer}
+              onPointerLeave={resetPointer}
+              style={reduced ? undefined : { rotateX, rotateY, transformStyle: 'preserve-3d' }}
+              className="relative"
+            >
+              {/* Soft halo behind the frame so it lifts off the page. */}
+              <div className="absolute -inset-6 -z-10 rounded-[2.5rem] bg-primary-500/10 blur-3xl dark:bg-primary-500/15" />
+
+              <div
+                className="overflow-hidden rounded-[1.75rem] shadow-[0_30px_80px_-30px_rgba(15,23,42,0.45)] ring-1 ring-black/5 dark:ring-white/10"
+                ref={emblaRef}
+              >
                 <div className="flex">
                   {banners.length > 0
-                    ? banners.map((banner, index) => (
-                        <div key={banner.id} className="flex-[0_0_100%] min-w-0">
-                          <div className={cn('relative aspect-square md:aspect-[4/3] rounded-3xl overflow-hidden bg-gradient-to-br', gradients[index % gradients.length])}>
-                            <ImgWithFallback
-                              src={banner.image_path}
-                              alt={banner.title}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    ? banners.map((banner, index) => {
+                        const active = selectedIndex === index;
+                        return (
+                          <div key={banner.id} className="min-w-0 flex-[0_0_100%]">
+                            <div
+                              className={cn(
+                                'relative aspect-square overflow-hidden bg-gradient-to-br md:aspect-[4/3]',
+                                gradients[index % gradients.length]
+                              )}
+                            >
+                              {/* Slow Ken Burns push on the active slide only. */}
+                              <motion.div
+                                className="absolute inset-0"
+                                animate={reduced ? undefined : { scale: active ? 1.08 : 1 }}
+                                transition={{ duration: AUTOPLAY_MS / 1000, ease: 'linear' }}
+                              >
+                                <ImgWithFallback
+                                  src={banner.image_path}
+                                  alt={banner.title}
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                />
+                              </motion.div>
 
-                            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                              <AnimatePresence mode="wait">
-                                {selectedIndex === index && (
-                                  <motion.div
-                                    key={banner.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                  >
-                                    <h3 className="font-display text-2xl md:text-3xl font-bold text-white mb-2">
-                                      {banner.title}
-                                    </h3>
-                                    {banner.description && (
-                                      <p className="text-white/80 text-sm md:text-base">
-                                        {banner.description}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+
+                              <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+                                <AnimatePresence mode="wait">
+                                  {active && (
+                                    <motion.div
+                                      key={banner.id}
+                                      initial={{ opacity: 0, y: 24 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -16 }}
+                                      transition={{ duration: 0.5, ease: EASE }}
+                                    >
+                                      <h3 className="font-display text-2xl font-bold text-white md:text-3xl">
+                                        {banner.title}
+                                      </h3>
+                                      {banner.description && (
+                                        <p className="mt-1 text-sm text-white/80 md:text-base">{banner.description}</p>
+                                      )}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    : fallbackSlides.map((slide, index) => {
+                        const active = selectedIndex === index;
+                        return (
+                          <div key={slide.id} className="min-w-0 flex-[0_0_100%]">
+                            <div
+                              className={cn(
+                                'relative aspect-square overflow-hidden bg-gradient-to-br md:aspect-[4/3]',
+                                slide.gradient
+                              )}
+                            >
+                              <motion.div
+                                className="absolute inset-0 flex items-center justify-center"
+                                animate={reduced ? undefined : { y: [0, -14, 0] }}
+                                transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                              >
+                                <BottleMark className="h-auto w-24 drop-shadow-2xl md:w-36" />
+                              </motion.div>
+
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+
+                              <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
+                                <AnimatePresence mode="wait">
+                                  {active && (
+                                    <motion.div
+                                      key={slide.id}
+                                      initial={{ opacity: 0, y: 24 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -16 }}
+                                      transition={{ duration: 0.5, ease: EASE }}
+                                    >
+                                      <h3 className="font-display text-2xl font-bold text-white md:text-3xl">
+                                        {dict.hero[slide.titleKey as keyof typeof dict.hero]}
+                                      </h3>
+                                      <p className="mt-1 text-sm text-white/80 md:text-base">
+                                        {dict.hero[slide.descKey as keyof typeof dict.hero]}
                                       </p>
-                                    )}
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    : fallbackSlides.map((slide, index) => (
-                        <div key={slide.id} className="flex-[0_0_100%] min-w-0">
-                          <div className={cn('relative aspect-square md:aspect-[4/3] rounded-3xl overflow-hidden bg-gradient-to-br', slide.gradient)}>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <svg viewBox="0 0 140 320" className="w-24 md:w-36 h-auto drop-shadow-2xl" fill="none">
-                                <rect x="45" y="8" width="50" height="25" rx="4" fill="rgba(255,255,255,0.95)" />
-                                <rect x="50" y="33" width="40" height="12" rx="2" fill="rgba(255,255,255,0.75)" />
-                                <path d="M50 45 L50 75 Q38 85 38 100 L38 285 Q38 305 58 305 L82 305 Q102 305 102 285 L102 100 Q102 85 90 75 L90 45" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
-                                <path d="M40 140 L40 280 Q40 298 58 298 L82 298 Q100 298 100 280 L100 140 Q70 160 40 140" fill="rgba(255,255,255,0.2)" />
-                                <rect x="48" y="170" width="44" height="70" rx="3" fill="rgba(255,255,255,0.35)" />
-                                <text x="70" y="210" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">OLEW</text>
-                              </svg>
-                            </div>
-
-                            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 bg-gradient-to-t from-black/40 to-transparent">
-                              <AnimatePresence mode="wait">
-                                {selectedIndex === index && (
-                                  <motion.div
-                                    key={slide.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                  >
-                                    <h3 className="font-display text-2xl md:text-3xl font-bold text-white mb-2">
-                                      {dict.hero[slide.titleKey as keyof typeof dict.hero]}
-                                    </h3>
-                                    <p className="text-white/80 text-sm md:text-base">
-                                      {dict.hero[slide.descKey as keyof typeof dict.hero]}
-                                    </p>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mt-6">
-                <div className="flex gap-2">
+              {/* Controls: the indicator bars double as an autoplay progress meter. */}
+              <div className="mt-5 flex items-center justify-between gap-6">
+                <div className="flex flex-1 gap-2">
                   {Array.from({ length: slideCount }).map((_, index) => (
                     <button
                       key={index}
                       onClick={() => emblaApi?.scrollTo(index)}
-                      className={cn(
-                        'h-2 rounded-full transition-all duration-300',
-                        selectedIndex === index ? 'w-8 bg-primary-500' : 'w-2 bg-gray-300 dark:bg-gray-600'
-                      )}
-                    />
+                      aria-label={`Slide ${index + 1}`}
+                      className="h-1 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800"
+                    >
+                      <motion.span
+                        className="block h-full origin-left rounded-full bg-primary-500"
+                        initial={false}
+                        animate={{ scaleX: selectedIndex === index ? 1 : 0 }}
+                        transition={{
+                          duration: selectedIndex === index && !reduced ? AUTOPLAY_MS / 1000 : 0.3,
+                          ease: 'linear',
+                        }}
+                      />
+                    </button>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={scrollPrev} className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-800 shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  <button
+                    onClick={scrollPrev}
+                    aria-label="Previous slide"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/80 text-gray-700 backdrop-blur transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:border-primary-500"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <button onClick={scrollNext} className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-gray-800 shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  <button
+                    onClick={scrollNext}
+                    aria-label="Next slide"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white/80 text-gray-700 backdrop-blur transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:border-primary-500"
+                  >
+                    <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>
+
+      {/* Scroll cue */}
+      <motion.div
+        aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2, duration: 0.8 }}
+        className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-gray-400 lg:flex"
+      >
+        <span className="text-[0.65rem] uppercase tracking-[0.2em]">Scroll</span>
+        <span className="relative block h-10 w-px overflow-hidden bg-gray-200 dark:bg-gray-800">
+          <motion.span
+            className="absolute inset-x-0 top-0 h-4 bg-primary-500"
+            animate={reduced ? undefined : { y: ['-100%', '250%'] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </span>
+      </motion.div>
     </section>
   );
 }

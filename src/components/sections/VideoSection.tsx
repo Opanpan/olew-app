@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Video, X } from 'lucide-react';
+import { Play, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import { getGallery, type GalleryItem } from '@/lib/publicApi';
+import SectionHeading from '@/components/shared/SectionHeading';
 
 function getYouTubeId(url: string): string | null {
   const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
@@ -81,39 +82,13 @@ export default function VideoSection() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl" />
 
       <div className="relative container-custom mx-auto px-4 md:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6"
-          >
-            <Video className="w-4 h-4 text-primary-400" />
-            <span className="text-sm font-medium text-primary-300">{dict.videos.badge}</span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4"
-          >
-            {dict.videos.title}
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-gray-400 max-w-2xl mx-auto"
-          >
-            {dict.videos.subtitle}
-          </motion.p>
-        </div>
-
+        <SectionHeading
+          index="02"
+          eyebrow={dict.videos.badge}
+          title={dict.videos.title}
+          lead={dict.videos.subtitle}
+          tone="invert"
+        />
         {/* Video bento grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-[260px] lg:auto-rows-[200px] gap-6">
           {items.map((item, index) => {

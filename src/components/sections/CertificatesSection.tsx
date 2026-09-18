@@ -1,8 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Award, BadgeCheck } from 'lucide-react';
+import { BadgeCheck } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
+import SectionHeading from '@/components/shared/SectionHeading';
 
 export default function CertificatesSection() {
   const { dict } = useLang();
@@ -10,39 +11,12 @@ export default function CertificatesSection() {
   return (
     <section id="certificates" className="section-padding bg-gray-50 dark:bg-gray-950">
       <div className="container-custom mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6"
-          >
-            <Award className="w-4 h-4 text-amber-500" />
-            <span className="text-sm font-medium text-amber-700 dark:text-amber-300">{dict.certificates.badge}</span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4"
-          >
-            {dict.certificates.title}
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
-          >
-            {dict.certificates.subtitle}
-          </motion.p>
-        </div>
-
+        <SectionHeading
+          index="04"
+          eyebrow={dict.certificates.badge}
+          title={dict.certificates.title}
+          lead={dict.certificates.subtitle}
+        />
         {/* Halal Highlight */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}

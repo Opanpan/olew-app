@@ -80,3 +80,24 @@ export function classifyByTypeName(typeName: string | undefined): AssemblySlot {
   const n = (typeName ?? '').trim().toLowerCase();
   return POT_SLOTS.find((s) => s.typeName === n)?.key ?? 'cap';
 }
+
+/**
+ * Admin-configured placement of one linked part. Scale and X/Z are fixed per
+ * model pairing; `mid` is the vertical "0" position a customer lifts from.
+ * A missing min/max counts as 0 so the default matches the admin's Combined Preview.
+ */
+export function layerPlacement(item: {
+  scale?: number;
+  position?: { x: number; z: number };
+  min_position_vertical?: number | null;
+  max_position_vertical?: number | null;
+} | null) {
+  const rawMin = typeof item?.min_position_vertical === 'number' ? item.min_position_vertical : 0;
+  const rawMax = typeof item?.max_position_vertical === 'number' ? item.max_position_vertical : 0;
+  return {
+    scale: item?.scale ?? 1,
+    offsetX: item?.position?.x ?? 0,
+    offsetZ: item?.position?.z ?? 0,
+    mid: (rawMin + rawMax) / 2,
+  };
+}

@@ -28,15 +28,14 @@ export default function CatalogHeader({
 
       <div className="container-custom mx-auto relative z-10 px-4">
         {/* Breadcrumb */}
-        <motion.nav
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="mb-4 md:mb-6"
-          aria-label="Breadcrumb"
         >
           <Breadcrumb items={breadcrumbs} />
-        </motion.nav>
+        </motion.div>
 
         {/* Badge */}
         <motion.div

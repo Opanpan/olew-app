@@ -7,6 +7,7 @@ import { useLang } from '@/lib/LangContext';
 import CountUp from '../shared/CountUp';
 import { getClients, type Client } from '@/lib/publicApi';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
+import SectionHeading from '@/components/shared/SectionHeading';
 
 const fallbackClients = [
   'Brand Alpha', 'Luxe Beauty', 'Pure Essence', 'Natural Care', 'Glow Labs', 'Skin Radiance',
@@ -69,39 +70,12 @@ export default function ClientsSection() {
   return (
     <section id="clients" className="section-padding bg-white dark:bg-gray-900 overflow-hidden">
       <div className="container-custom mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6"
-          >
-            <Users className="w-4 h-4 text-primary-500" />
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">{dict.clients.badge}</span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4"
-          >
-            {dict.clients.title}
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
-          >
-            {dict.clients.subtitle}
-          </motion.p>
-        </div>
-
+        <SectionHeading
+          index="05"
+          eyebrow={dict.clients.badge}
+          title={dict.clients.title}
+          lead={dict.clients.subtitle}
+        />
         {/* Marquee */}
         <div className="space-y-6">
           {/* Row 1 — left to right */}

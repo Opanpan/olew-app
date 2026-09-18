@@ -54,25 +54,29 @@
 .range-thumb::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #3b82f6;
-  border: 2px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-  cursor: pointer;
+  background: #fff;
+  border: 2px solid #0272ca;
+  cursor: grab;
   pointer-events: all;
 }
 .range-thumb::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: #3b82f6;
-  border: 2px solid white;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-  cursor: pointer;
+  background: #fff;
+  border: 2px solid #0272ca;
+  cursor: grab;
   pointer-events: all;
 }
+.range-thumb:active::-webkit-slider-thumb { cursor: grabbing; }
+.range-thumb:focus-visible { outline: none; }
+.range-thumb:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(2, 114, 202, 0.35); }
+.range-thumb:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(2, 114, 202, 0.35); }
+.dark .range-thumb::-webkit-slider-thumb { background: #111827; border-color: #38acf7; }
+.dark .range-thumb::-moz-range-thumb { background: #111827; border-color: #38acf7; }
 
 /* ── Global scrollbar ────────────────────────────────────────────────────── */
 

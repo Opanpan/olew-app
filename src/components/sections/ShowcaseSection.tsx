@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import { getGallery, type GalleryItem } from '@/lib/publicApi';
 import ImgWithFallback from '@/components/shared/ImgWithFallback';
+import SectionHeading from '@/components/shared/SectionHeading';
 
 const gradients = [
   'from-rose-500 via-pink-500 to-fuchsia-600',
@@ -71,29 +72,11 @@ export default function ShowcaseSection() {
   return (
     <section className="relative py-20 md:py-32 overflow-hidden bg-gray-50 dark:bg-gray-950">
       <div className="container-custom mx-auto px-4 md:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6"
-          >
-            <Star className="w-4 h-4 text-primary-500" />
-            <span className="text-sm font-medium text-primary-700 dark:text-primary-300">{dict.showcase.badge}</span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white"
-          >
-            {dict.showcase.title}
-          </motion.h2>
-        </div>
-
+        <SectionHeading
+          index="01"
+          eyebrow={dict.showcase.badge}
+          title={dict.showcase.title}
+        />
         {/* Carousel */}
         <div className="relative -mx-4 md:-mx-8">
           <div className="overflow-hidden" ref={emblaRef}>

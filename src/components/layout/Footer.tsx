@@ -122,7 +122,7 @@ export default function Footer() {
               <input
                 type="email"
                 placeholder={dict.footer.email_placeholder}
-                className="flex-1 px-4 py-2 rounded-lg text-sm bg-white/10 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
+                className="min-w-0 flex-1 px-4 py-2 rounded-lg text-sm bg-white/10 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary-500"
               />
               <button type="submit" className="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 transition-colors text-sm font-medium">
                 →
