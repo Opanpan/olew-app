@@ -192,6 +192,12 @@ function ModelUnavailable() {
   );
 }
 
+// Default camera for the standalone viewer, pulled back far enough that a fully
+// exploded pot (four layers spaced by EXPLODE_STEP) fits in frame without the
+// customer having to scroll-zoom out first. Compact viewers keep the tighter
+// framing — they only ever show an assembled product in a small card.
+const DEFAULT_CAMERA_POS: [number, number, number] = [4.3, 2.9, 4.3];
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Product3DViewer({
@@ -241,7 +247,7 @@ export default function Product3DViewer({
           <Canvas
             key={resetKey}
             dpr={[1, 1.5]}
-            camera={{ position: [3, 2, 3], fov: 50 }}
+            camera={{ position: compact ? [3, 2, 3] : DEFAULT_CAMERA_POS, fov: 50 }}
             gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             onCreated={({ gl }) => {
               const canvas = gl.domElement;
@@ -293,7 +299,7 @@ export default function Product3DViewer({
                 enabled={orbitEnabled}
                 noPan
                 minDistance={2}
-                maxDistance={6}
+                maxDistance={8}
                 rotateSpeed={3.5}
                 zoomSpeed={1.2}
                 dynamicDampingFactor={0.15}

@@ -53,8 +53,8 @@ Two separate concerns, both name-based because the API exposes no structural fla
 
 ```
 5  Outer Cap   ▲ top
-4  Plug
-3  Inner Cap
+4  Inner Cap
+3  Plug
 2  Inner Pot
 1  Body        ▼ bottom   ← the Pot product itself
 ```
