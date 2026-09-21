@@ -32,7 +32,7 @@ const Product3DViewer = dynamic(() => import('./Product3DViewer'), { ssr: false 
 // in flight and for anything unrecognised, which preserves plain Bottle+Cap
 // behaviour unchanged.
 //
-// Ordered top-of-the-stack first (Outer Cap → Plug → Inner Cap → Inner Pot) so
+// Ordered top-of-the-stack first (Outer Cap → Inner Cap → Plug → Inner Pot) so
 // the configurator reads down the pot in physical order.
 const COMPAT_ROLES = SLOTS_TOP_DOWN.map((s) => s.key);
 type CompatRole = AssemblySlot;
@@ -41,10 +41,12 @@ type PartKey = 'body' | CompatRole;
 const ALL_PART_KEYS: PartKey[] = ['body', ...COMPAT_ROLES];
 
 // Max upward offset (real 3D units) a customer can raise a layer from its
-// admin-configured default position. Shown to the customer as 0–100%.
-const POSITION_MAX = 1.5;
-// Per-layer spacing used by "Separate parts" (exploded view).
-const EXPLODE_STEP = 0.2;
+// admin-configured default position. Shown to the customer as 0–100%. Tall
+// enough to clear a fully exploded four-layer pot (4 × EXPLODE_STEP).
+const POSITION_MAX = 2.5;
+// Per-layer spacing used by "Separate parts" (exploded view). Wide enough that
+// every layer reads as its own part instead of touching the one below it.
+const EXPLODE_STEP = 0.5;
 
 const DEFAULT_COLOR: PartColor = { hex: colorToHex['White'] ?? '#ffffff', name: 'White' };
 

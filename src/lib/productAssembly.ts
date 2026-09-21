@@ -7,8 +7,8 @@
  * slots 2–5 are selectable compatibility options:
  *
  *     5  Outer Cap   ▲ top
- *     4  Plug
- *     3  Inner Cap
+ *     4  Inner Cap
+ *     3  Plug
  *     2  Inner Pot
  *     1  Body        ▼ bottom   ← the Pot product itself
  *
@@ -22,7 +22,7 @@
  * the product types seeded on the backend.
  */
 
-export const ASSEMBLY_SLOTS = ['outer_cap', 'plug', 'inner_cap', 'inner_pot', 'cap'] as const;
+export const ASSEMBLY_SLOTS = ['outer_cap', 'inner_cap', 'plug', 'inner_pot', 'cap'] as const;
 export type AssemblySlot = typeof ASSEMBLY_SLOTS[number];
 
 export interface SlotDef {
@@ -30,7 +30,7 @@ export interface SlotDef {
   /** Lowercased product-type `name_en` that maps a linked product into this slot. */
   typeName: string;
   /** Key into `dict.catalog.compare.role_*` for the display label. */
-  dictKey: 'role_outer_cap' | 'role_plug' | 'role_inner_cap' | 'role_inner_pot' | 'role_cap';
+  dictKey: 'role_outer_cap' | 'role_inner_cap' | 'role_plug' | 'role_inner_pot' | 'role_cap';
   /** 1 = bottom of the stack … 5 = top. Drives render order and UI ordering. */
   stack: number;
 }
@@ -38,8 +38,8 @@ export interface SlotDef {
 /** Attachable pot slots, TOP of the stack first — the order the UI renders them. */
 export const POT_SLOTS: SlotDef[] = [
   { key: 'outer_cap', typeName: 'outer cap', dictKey: 'role_outer_cap', stack: 5 },
-  { key: 'plug',      typeName: 'plug',      dictKey: 'role_plug',      stack: 4 },
-  { key: 'inner_cap', typeName: 'inner cap', dictKey: 'role_inner_cap', stack: 3 },
+  { key: 'inner_cap', typeName: 'inner cap', dictKey: 'role_inner_cap', stack: 4 },
+  { key: 'plug',      typeName: 'plug',      dictKey: 'role_plug',      stack: 3 },
   { key: 'inner_pot', typeName: 'inner pot', dictKey: 'role_inner_pot', stack: 2 },
 ];
 
