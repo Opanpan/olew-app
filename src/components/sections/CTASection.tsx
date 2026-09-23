@@ -30,7 +30,7 @@ export default function CTASection() {
         <div className="relative container-custom mx-auto px-4 sm:px-6 md:px-12 py-14 md:py-20">
           <div className="max-w-3xl mx-auto text-center">
             <SectionHeading
-              index="06"
+              index="07"
               eyebrow={dict.cta.badge}
               title={dict.cta.title}
               lead={dict.cta.subtitle}
