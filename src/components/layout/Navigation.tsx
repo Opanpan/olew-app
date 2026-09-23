@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LangContext';
 import { WHATSAPP_NUMBER, MOBILE_PHONE, MOBILE_PHONE_TEL, EMAIL } from '@/lib/contact';
 
-const navItems = ['home', 'about', 'products', 'certificates', 'clients', 'contact'] as const;
+// Certificates, Clients and Contact are sections of the home page, so linking
+// them from the header only duplicated what Home already scrolls through.
+const navItems = ['home', 'about', 'products'] as const;
 type NavItem = typeof navItems[number];
 const productFamilies = ['bottles', 'caps', 'pot'] as const;
 
@@ -72,19 +74,15 @@ export default function Navigation() {
   }, [isLangMenuOpen]);
 
   const getHref = (key: NavItem) => {
-    if (key === 'home') return `/${lang}`;
     if (key === 'about') return `/${lang}/about`;
     if (key === 'products') return `/${lang}/products`;
-    return `/${lang}#${key}`;
+    return `/${lang}`;
   };
 
-  // Section anchors (certificates/clients/contact) live on the home page, so
-  // only real routes can be "current".
   const isActive = (key: NavItem) => {
     if (key === 'home') return pathname === `/${lang}` || pathname === `/${lang}/`;
     if (key === 'about') return pathname.startsWith(`/${lang}/about`);
-    if (key === 'products') return pathname.startsWith(`/${lang}/products`) || pathname.startsWith(`/${lang}/compare`);
-    return false;
+    return pathname.startsWith(`/${lang}/products`) || pathname.startsWith(`/${lang}/compare`);
   };
 
   const switchLangPath = (newLang: string) => `/${newLang}${pathname.replace(/^\/(en|id)/, '')}`;
