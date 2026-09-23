@@ -9,7 +9,7 @@
  */
 
 import { motion, useReducedMotion, type Variants, type HTMLMotionProps } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /** Soft, slightly overshooting ease — movement settles instead of stopping dead. */
@@ -166,28 +166,36 @@ export function WordReveal({
       className={className}
     >
       {words.map((word, i) => (
-        // The clip wrapper is what makes the word rise out of nothing; without
-        // it the text would just fade while overlapping the line above.
-        <span key={`${word}-${i}`} className="inline-block overflow-hidden align-bottom pb-[0.12em]">
-          <motion.span
-            variants={
-              reduced
-                ? staticVariants
-                : {
-                    hidden: { y: '110%' },
-                    visible: { y: '0%', transition: { duration: 0.75, ease: EASE } },
-                  }
-            }
-            className={cn(
-              'inline-block',
-              wordClassName,
-              accentFrom !== undefined && i >= accentFrom && accentClassName
-            )}
-          >
-            {word}
-            {i < words.length - 1 && ' '}
-          </motion.span>
-        </span>
+        <Fragment key={`${word}-${i}`}>
+          {/* The clip wrapper is what makes the word rise out of nothing;
+              without it the text would just fade while overlapping the line
+              above. */}
+          <span className="inline-block overflow-hidden align-bottom pb-[0.12em]">
+            <motion.span
+              variants={
+                reduced
+                  ? staticVariants
+                  : {
+                      hidden: { y: '110%' },
+                      visible: { y: '0%', transition: { duration: 0.75, ease: EASE } },
+                    }
+              }
+              className={cn(
+                'inline-block',
+                wordClassName,
+                accentFrom !== undefined && i >= accentFrom && accentClassName
+              )}
+            >
+              {word}
+            </motion.span>
+          </span>
+          {/* The separating space must live BETWEEN the inline-block wrappers,
+              never inside them. Inline-blocks with no whitespace between them
+              give the browser no break opportunity, so the heading becomes one
+              unbreakable line — which sets a min-content width wider than a
+              phone and drags every sibling in the layout off-screen with it. */}
+          {i < words.length - 1 && ' '}
+        </Fragment>
       ))}
     </MotionTag>
   );
