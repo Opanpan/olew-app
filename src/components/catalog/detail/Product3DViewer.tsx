@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { TrackballControls, Environment, useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { RotateCcw, Loader2 } from 'lucide-react';
@@ -30,9 +30,47 @@ interface Product3DViewerProps {
   compact?: boolean;
   /** Controlled by the parent so an externally-rendered color picker can suspend orbit drag. */
   orbitEnabled?: boolean;
+  /**
+   * Overrides the frame. Defaults to a square panel; the hero passes its own
+   * height so the exploded stack gets a tall, transparent stage.
+   */
+  className?: string;
+  /** Overrides the default camera placement — pull further back for tall stacks. */
+  cameraPosition?: [number, number, number];
+  /**
+   * What the camera orbits around. Defaults to the assembled product's middle;
+   * a separated stack is taller, so its centre of mass sits higher.
+   */
+  cameraTarget?: [number, number, number];
+  /**
+   * Fixed pose (radians, XYZ) for the whole assembly. The spin below happens
+   * *inside* it, about the stack's own axis, so the pose never changes — the
+   * parts turn in place rather than the whole stack swinging around.
+   */
+  tilt?: [number, number, number];
+  /** Radians per second the parts spin about the stack's axis. 0 (default) = still. */
+  autoRotateSpeed?: number;
+  /** Fired once, when the model(s) have finished loading and are on screen. */
+  onReady?: () => void;
+  /** 0–100 asset download progress, for a loader rendered outside the canvas. */
+  onProgress?: (p: number) => void;
+  /**
+   * Control-less viewers only: measure the scene and frame it to the canvas so
+   * nothing is cropped at any width. `cameraPosition` then supplies only the
+   * viewing direction — its distance and `cameraTarget` are both ignored.
+   */
+  autoFit?: boolean;
 }
 
 // ─── 3D Models ───────────────────────────────────────────────────────────────
+
+/**
+ * Draco decoder served from our own origin. drei defaults to Google's gstatic
+ * CDN, which is a third-party runtime dependency on the critical path of the
+ * home page — a blocked or slow CDN means no 3D at all. The decoder is ~750KB
+ * of static files and is only fetched when a model actually uses Draco.
+ */
+const DRACO_DECODER_PATH = '/draco/';
 
 // Dispose the materials we created on a cloned scene when it's replaced/unmounted.
 // (Geometries are shared with the cached GLTF, so we never dispose those.)
@@ -52,7 +90,7 @@ function BottleModel({ url, color, scale = 1, onHeightReady }: {
   url: string; color: string; scale?: number;
   onHeightReady?: (h: number) => void;
 }) {
-  const { scene: gltfScene } = useGLTF(url);
+  const { scene: gltfScene } = useGLTF(url, DRACO_DECODER_PATH);
   const scene = useMemo(() => {
     const s = gltfScene.clone(true);
     s.traverse((child) => {
@@ -86,7 +124,7 @@ function BottleModel({ url, color, scale = 1, onHeightReady }: {
 function AttachedLayerModel({ url, color, bottleHeight = 1, scale = 1, positionY = 0, positionX = 0, positionZ = 0, renderOrder = 0 }: {
   url: string; color: string; bottleHeight?: number; scale?: number; positionY?: number; positionX?: number; positionZ?: number; renderOrder?: number;
 }) {
-  const { scene: gltfScene } = useGLTF(url);
+  const { scene: gltfScene } = useGLTF(url, DRACO_DECODER_PATH);
   const scene = useMemo(() => {
     const s = gltfScene.clone(true);
     s.traverse((child) => {
@@ -161,12 +199,18 @@ function PlaceholderModel({ color, type }: { color: string; type: 'bottle' | 'ca
 
 // Real download progress (via three's DefaultLoadingManager, tracked by drei) for
 // whichever GLB(s) are currently in flight — shown while the real model streams in.
-function ModelLoadingOverlay() {
+function ModelLoadingOverlay({ transparent = false }: { transparent?: boolean }) {
   const { dict } = useLang();
   const { active, progress } = useProgress();
   if (!active) return null;
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-100/90 dark:bg-gray-900/90">
+    // A framed viewer sits on its own panel, so the overlay matches it. A
+    // transparent one (the hero) would otherwise flash an opaque grey slab over
+    // the page background on every cold load.
+    <div className={cn(
+      'absolute inset-0 z-20 flex items-center justify-center',
+      transparent ? 'bg-transparent' : 'bg-gray-100/90 dark:bg-gray-900/90'
+    )}>
       <div className="w-40 text-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400 mx-auto mb-3" />
         <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-2">
@@ -192,6 +236,122 @@ function ModelUnavailable() {
   );
 }
 
+/** Turns its children about their own Y axis. Held still for reduced motion. */
+function SpinGroup({ speed, children }: { speed: number; children: ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  const reduceMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
+  useFrame((_, delta) => {
+    if (speed === 0 || reduceMotion) return;
+    if (ref.current) ref.current.rotation.y += speed * delta;
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
+/** Reports asset progress, and the moment the scene's assets are in. */
+function ReadyProbe({ onReady, onProgress }: { onReady?: () => void; onProgress?: (p: number) => void }) {
+  const { active, progress } = useProgress();
+  const fired = useRef(false);
+  useEffect(() => {
+    onProgress?.(progress);
+    if (fired.current || !onReady) return;
+    if (!active && progress > 0) {
+      fired.current = true;
+      onReady();
+    }
+  }, [active, progress, onReady, onProgress]);
+  return null;
+}
+
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
+
+/**
+ * Aims the camera when no controls are mounted, and optionally frames whatever
+ * is actually in the scene.
+ *
+ * `fit` measures the real bounding box of `objectRef` and backs the camera off
+ * until every corner of it sits inside the frustum. Every hand-picked distance before
+ * this cropped somewhere: the viewer's height is fixed in CSS while its width
+ * follows the layout, so one distance only ever suits one window, and a guessed
+ * centre leaves the subject lopsided. Measuring removes both guesses.
+ */
+function StaticCamera({ target, from, fit, objectRef, margin = 1.06 }: {
+  target: [number, number, number];
+  from: [number, number, number];
+  fit?: boolean;
+  objectRef: React.RefObject<THREE.Group | null>;
+  margin?: number;
+}) {
+  const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
+  const size = useThree((state) => state.size);
+  const { active } = useProgress();
+  // GLBs mount a few frames after loading reports done, and each one nudges the
+  // bounds, so re-measure over a short window rather than once.
+  const settle = useRef(0);
+
+  useLayoutEffect(() => {
+    settle.current = fit ? 90 : 0;
+  }, [fit, active, size.width, size.height]);
+
+  useLayoutEffect(() => {
+    if (fit) return;
+    camera.lookAt(target[0], target[1], target[2]);
+    camera.updateProjectionMatrix();
+  }, [camera, target, fit]);
+
+  useFrame(() => {
+    if (!fit || settle.current <= 0) return;
+    settle.current -= 1;
+    const obj = objectRef.current;
+    if (!obj) return;
+    const box = new THREE.Box3().setFromObject(obj);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+
+    // View basis for the fixed direction.
+    const forward = new THREE.Vector3(from[0], from[1], from[2])
+      .sub(new THREE.Vector3(target[0], target[1], target[2]))
+      .normalize();
+    const right = new THREE.Vector3().crossVectors(forward, WORLD_UP).normalize();
+    const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+
+    const halfV = THREE.MathUtils.degToRad(camera.fov) / 2;
+    const aspect = size.width / Math.max(size.height, 1);
+    const tanV = Math.tan(halfV);
+    const tanH = tanV * aspect;
+
+    // Fit the box itself rather than its bounding sphere: for a stack leaning
+    // across the frame the sphere's radius is half the *diagonal*, which wastes
+    // a lot of height. Each corner must sit inside the frustum, so solve the
+    // smallest distance that satisfies every one of them.
+    const v = new THREE.Vector3();
+    let distance = 0;
+    for (let i = 0; i < 8; i++) {
+      v.set(
+        i & 1 ? box.max.x : box.min.x,
+        i & 2 ? box.max.y : box.min.y,
+        i & 4 ? box.max.z : box.min.z
+      ).sub(center);
+      const x = Math.abs(v.dot(right));
+      const y = Math.abs(v.dot(up));
+      const z = v.dot(forward); // toward the camera
+      distance = Math.max(distance, z + (x / tanH) * margin, z + (y / tanV) * margin);
+    }
+    if (!(distance > 0)) return;
+
+    const depth = box.getSize(v).length();
+    camera.position.copy(center).addScaledVector(forward, distance);
+    camera.near = Math.max(0.1, distance - depth);
+    camera.far = distance + depth * 2;
+    camera.lookAt(center);
+    camera.updateProjectionMatrix();
+  });
+
+  return null;
+}
+
 // Default camera for the standalone viewer, pulled back far enough that a fully
 // exploded pot (four layers spaced by EXPLODE_STEP) fits in frame without the
 // customer having to scroll-zoom out first. Compact viewers keep the tighter
@@ -207,7 +367,16 @@ export default function Product3DViewer({
   layers = [],
   compact = false,
   orbitEnabled = true,
+  className,
+  cameraPosition,
+  cameraTarget = [0, 0.5, 0],
+  tilt,
+  autoRotateSpeed = 0,
+  autoFit = false,
+  onReady,
+  onProgress,
 }: Product3DViewerProps) {
+  const contentRef = useRef<THREE.Group>(null);
   const { dict } = useLang();
   const [resetKey, setResetKey] = useState(0);
   const recoveryAttempts = useRef(0);
@@ -217,10 +386,12 @@ export default function Product3DViewer({
   return (
     <div
       className={cn(
-        'relative w-full aspect-square overflow-hidden',
+        'relative w-full overflow-hidden',
+        !className && 'aspect-square',
         // compact viewers (compare page) stay transparent so they blend into the
         // card; the standalone viewer sits on a flat studio-grey backdrop
-        !compact && 'rounded-md bg-gray-100 dark:bg-gray-900'
+        !compact && 'rounded-md bg-gray-100 dark:bg-gray-900',
+        className
       )}
       style={{ touchAction: 'none' }}
     >
@@ -247,7 +418,7 @@ export default function Product3DViewer({
           <Canvas
             key={resetKey}
             dpr={[1, 1.5]}
-            camera={{ position: compact ? [3, 2, 3] : DEFAULT_CAMERA_POS, fov: 50 }}
+            camera={{ position: cameraPosition ?? (compact ? [3, 2, 3] : DEFAULT_CAMERA_POS), fov: 50 }}
             gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             onCreated={({ gl }) => {
               const canvas = gl.domElement;
@@ -263,12 +434,14 @@ export default function Product3DViewer({
             }}
           >
             <Suspense fallback={null}>
+              <ReadyProbe onReady={onReady} onProgress={onProgress} />
               <ambientLight intensity={1.1} />
               <directionalLight position={[5, 5, 5]} intensity={0.3} />
               <directionalLight position={[-5, 3, -5]} intensity={0.3} />
               <directionalLight position={[0, 5, -5]} intensity={0.25} />
               <Environment preset="studio" blur={1} />
-              <>
+              <group ref={contentRef} rotation={tilt ?? [0, 0, 0]}>
+                <SpinGroup speed={autoRotateSpeed}>
                 <Suspense key={bottleModelUrl} fallback={<PlaceholderModel color={bottleColor} type="bottle" />}>
                   <BottleModel
                     url={bottleModelUrl}
@@ -291,23 +464,34 @@ export default function Product3DViewer({
                     />
                   </Suspense>
                 ))}
-              </>
+                </SpinGroup>
+              </group>
               {/* Trackball = free arcball rotation on all axes (X/Y and Z roll),
-                  like Meshy's model preview — no fixed up-vector or polar limits. */}
-              <TrackballControls
-                makeDefault
-                enabled={orbitEnabled}
-                noPan
-                minDistance={2}
-                maxDistance={8}
-                rotateSpeed={3.5}
-                zoomSpeed={1.2}
-                dynamicDampingFactor={0.15}
-                target={[0, 0.5, 0]}
-              />
+                  like Meshy's model preview — no fixed up-vector or polar limits.
+                  A display-only viewer mounts no controls at all, so nothing
+                  listens for drags and the camera is aimed once instead. */}
+              {orbitEnabled ? (
+                <TrackballControls
+                  makeDefault
+                  noPan
+                  minDistance={2}
+                  maxDistance={9}
+                  rotateSpeed={3.5}
+                  zoomSpeed={1.2}
+                  dynamicDampingFactor={0.15}
+                  target={cameraTarget}
+                />
+              ) : (
+                <StaticCamera
+                  target={cameraTarget}
+                  from={cameraPosition ?? (compact ? [3, 2, 3] : DEFAULT_CAMERA_POS)}
+                  fit={autoFit}
+                  objectRef={contentRef}
+                />
+              )}
             </Suspense>
           </Canvas>
-          <ModelLoadingOverlay />
+          <ModelLoadingOverlay transparent={compact} />
         </>
       ) : (
         <ModelUnavailable />
