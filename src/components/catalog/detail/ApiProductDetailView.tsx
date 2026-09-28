@@ -30,10 +30,12 @@ const Product3DViewer = dynamic(() => import('./Product3DViewer'), { ssr: false 
 // the stacking model. Classified by the linked product's own product_type (the
 // API returns no slot field); "cap" is the fallback both while classification is
 // in flight and for anything unrecognised, which preserves plain Bottle+Cap
-// behaviour unchanged.
+// (pump/sprayer/trigger) behaviour unchanged for products that don't use the
+// dedicated Outer Cap / Inner Cap types.
 //
 // Ordered top-of-the-stack first (Outer Cap → Inner Cap → Plug → Inner Pot) so
-// the configurator reads down the pot in physical order.
+// the configurator reads down the pot/bottle in physical order — a bottle just
+// never populates the Plug/Inner Pot rows.
 const COMPAT_ROLES = SLOTS_TOP_DOWN.map((s) => s.key);
 type CompatRole = AssemblySlot;
 /** Configurator row key: the base product ('body') or an attachable slot. */
@@ -84,7 +86,11 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   // Parts are unlisted in the catalog but still have reachable detail pages, so
   // their breadcrumb points back at the pot catalog rather than defaulting to caps.
   const categoryPath = breadcrumbSlugFor(product.type.name_en, product.type.name_id);
-  const isPot = classifyFamily(product.type.name_en, product.type.name_id) === 'pot';
+  const productFamily = classifyFamily(product.type.name_en, product.type.name_id);
+  const isPot = productFamily === 'pot';
+  // A Bottle is the same kind of Body-anchored stack as a Pot, just shorter
+  // (Outer Cap + Inner Cap, no Plug/Inner Pot) — see `@/lib/productAssembly`.
+  const isAssembly = isPot || productFamily === 'bottle';
 
   const modelUrl = validGlbUrl(product.three_d_file_path);
   const imageUrls = [...product.images].sort((a, b) => a.sort_order - b.sort_order).map((img) => img.file_path);
@@ -158,11 +164,11 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
     setPartLoading((prev) => ({ ...prev, [role]: false }));
   }, []);
 
-  // A pot starts fully assembled: the first model of every slot is pre-selected
-  // once classification is done (before that, everything sits in "cap").
+  // A pot or bottle starts fully assembled: the first model of every slot is
+  // pre-selected once classification is done (before that, everything sits in "cap").
   const didAutoSelect = useRef(false);
   useEffect(() => {
-    if (didAutoSelect.current || !isPot) return;
+    if (didAutoSelect.current || !isAssembly) return;
     const items = compatibility?.compatible ?? [];
     if (items.length === 0 || items.some((it) => idToRole[it.id] === undefined)) return;
     didAutoSelect.current = true;
@@ -170,7 +176,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
       const first = compatByRole[role][0];
       if (first) selectModel(role, first.id);
     }
-  }, [isPot, compatibility, idToRole, compatByRole, selectModel]);
+  }, [isAssembly, compatibility, idToRole, compatByRole, selectModel]);
 
   // Bottom-up: the viewer derives each layer's draw order from its array position.
   const layers = SLOTS_BOTTOM_UP.flatMap(({ key: role }) => {
@@ -245,7 +251,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
   const colorText = (c: PartColor) => c.name || c.hex.toUpperCase();
   const buildQuoteMessage = () => {
     const colorWord = d.part_color;
-    const baseLabel = isPot ? cmp.role_body : typeName;
+    const baseLabel = isAssembly ? cmp.role_body : typeName;
     const lines = [
       lang === 'id' ? 'Halo, saya tertarik dengan produk berikut:' : "Hi, I'm interested in the following product:",
       '',
@@ -272,7 +278,7 @@ export default function ApiProductDetailView({ product, relatedProducts, compati
       color: colors[role],
       lift: lift[role],
     })),
-    { key: 'body', label: isPot ? cmp.role_body : typeName, fixedName: productName, color: colors.body },
+    { key: 'body', label: isAssembly ? cmp.role_body : typeName, fixedName: productName, color: colors.body },
   ];
 
   const description = product.description

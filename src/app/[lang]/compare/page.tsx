@@ -102,8 +102,10 @@ function CompareContent() {
     const slot = SLOT_BY_KEY[role as AssemblySlot];
     return slot ? c[slot.dictKey] : c.role_cap;
   };
-  const baseLabel = (p: ProductDetail) =>
-    classifyFamily(p.type.name_en, p.type.name_id) === 'pot' ? c.role_body : typeName(p);
+  const baseLabel = (p: ProductDetail) => {
+    const family = classifyFamily(p.type.name_en, p.type.name_id);
+    return family === 'pot' || family === 'bottle' ? c.role_body : typeName(p);
+  };
 
   if (loading) {
     return (

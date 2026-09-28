@@ -1,5 +1,5 @@
 /**
- * Pot assembly slot vocabulary — the storefront mirror of the admin panel's
+ * Assembly slot vocabulary — the storefront mirror of the admin panel's
  * `src/features/products/slots.ts`. Keep the two in sync.
  *
  * A Pot is built from five stacked layers. Slot 1 (Body) is the Pot product
@@ -12,9 +12,18 @@
  *     2  Inner Pot
  *     1  Body        ▼ bottom   ← the Pot product itself
  *
- * A Bottle keeps its single generic Cap slot, which is also the fallback for any
- * compatible item whose type isn't recognised — so legacy links stay visible
- * instead of disappearing, and plain Bottle+Cap behaviour is unchanged.
+ * A Bottle stacks three layers the same way, just without Plug/Inner Pot — it
+ * shares the same Outer Cap / Inner Cap types as a Pot, so a part classifies
+ * into the same slot whether it's attached to a Pot or a Bottle:
+ *
+ *     3  Outer Cap   ▲ top
+ *     2  Inner Cap
+ *     1  Body        ▼ bottom   ← the Bottle product itself
+ *
+ * Any other product type (Cap, Pump, Sprayer, Trigger, …) keeps the single
+ * generic Cap slot, which is also the fallback for any compatible item whose
+ * type isn't recognised — so legacy links (e.g. a pump attached to a Bottle
+ * before this slot vocabulary existed) stay visible instead of disappearing.
  *
  * The API does NOT return a slot on the compatibility row (the `role` field on
  * `CompatibleProduct` is advisory and always absent in practice), so a linked

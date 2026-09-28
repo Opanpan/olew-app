@@ -7,14 +7,15 @@ import { validGlbUrl } from '@/lib/utils';
 const WHITE = { hex: '#ffffff', name: 'White' };
 
 /**
- * The standard assembly for a pot: the first compatible model in every slot,
- * all white, at the admin default positions — exactly what the detail page
- * pre-selects. Used when a pot reaches Compare without a saved configuration
- * (e.g. added from a catalog card), so it isn't compared as a bare body.
- * Returns undefined for non-pots or when the pot has no linked parts.
+ * The standard assembly for a pot or bottle: the first compatible model in
+ * every slot, all white, at the admin default positions — exactly what the
+ * detail page pre-selects. Used when one reaches Compare without a saved
+ * configuration (e.g. added from a catalog card), so it isn't compared as a
+ * bare body. Returns undefined for anything else, or when it has no linked parts.
  */
 export async function buildDefaultAssembly(product: ProductDetail): Promise<CompareConfig | undefined> {
-  if (classifyFamily(product.type.name_en, product.type.name_id) !== 'pot') return undefined;
+  const family = classifyFamily(product.type.name_en, product.type.name_id);
+  if (family !== 'pot' && family !== 'bottle') return undefined;
   const compat = await getProductCompatibilities(product.id);
   const items = compat?.compatible ?? [];
   if (items.length === 0) return undefined;

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { EASE, Reveal, WordReveal } from '@/components/shared/motion';
 import type { HeroAssemblyData } from '@/lib/heroAssembly';
 import { markHeroReady } from '@/lib/heroReady';
 import HeroAssembly from './HeroAssembly';
+import HeroBottleAssembly from './HeroBottleAssembly';
 
 const STATS = [
   { value: 500, suffix: '+', label: 'Products' },
@@ -37,21 +38,47 @@ function PotMark({ className }: { className?: string }) {
   );
 }
 
-export default function HeroSection({ assembly }: { assembly: HeroAssemblyData | null }) {
+interface HeroSectionProps {
+  pot: HeroAssemblyData | null;
+  /** Secondary companion shown beside the pot — optional, purely decorative. */
+  bottle: HeroAssemblyData | null;
+}
+
+export default function HeroSection({ pot, bottle }: HeroSectionProps) {
   const { lang, dict } = useLang();
   const reduced = useReducedMotion();
+  const sectionRef = useRef<HTMLElement>(null);
 
-  // No assembly means no 3D will ever load, so release the intro curtain
-  // immediately rather than making the visitor wait out its timeout.
+  // No pot means no 3D will ever load, so release the intro curtain
+  // immediately rather than making the visitor wait out its timeout. The
+  // bottle is a secondary decoration and never gates the curtain itself.
   useEffect(() => {
-    if (!assembly) markHeroReady();
-  }, [assembly]);
+    if (!pot) markHeroReady();
+  }, [pot]);
+
+  // Scroll-scrubbed reassembly: 1 (fully exploded, parts adrift) at the top of
+  // the page, easing to 0 (assembled) by the time the section is half
+  // scrolled past — the visual is vertically centred in the section, so it's
+  // still clearly on screen for that whole range, no scroll-pinning needed.
+  // `useMotionValueEvent` reads the scroll-linked value into plain state so it
+  // can flow down as an ordinary prop into the 3D layers.
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'center start'] });
+  const explodeMV = useTransform(scrollYProgress, [0, 1], [1, 0]);
+  const [explode, setExplode] = useState(1);
+  useMotionValueEvent(explodeMV, 'change', setExplode);
+  // Reduced motion gets the static exploded pose (the pre-scroll-effect look)
+  // and no scroll-linked motion at all, per prefers-reduced-motion.
+  const effectiveExplode = reduced ? 1 : explode;
 
   const titleWords = dict.hero.title.split(' ');
   const accentFrom = Math.max(titleWords.length - 2, 0);
 
   return (
-    <section id="home" className="relative flex min-h-screen items-center overflow-x-clip overflow-y-hidden pt-24 md:pt-28">
+    <section
+      id="home"
+      ref={sectionRef}
+      className="relative flex min-h-screen items-center overflow-x-clip overflow-y-hidden pt-24 md:pt-28"
+    >
       {/* Background: one quiet wash and a hairline grid that fades at the edges.
           No drifting colour blobs — the product is the only thing on this screen
           that should be asking for attention. */}
@@ -142,8 +169,26 @@ export default function HeroSection({ assembly }: { assembly: HeroAssemblyData |
             transition={{ duration: 0.8, delay: 0.25, ease: EASE }}
             className="order-2 min-w-0"
           >
-            {assembly ? (
-              <HeroAssembly data={assembly} />
+            {pot ? (
+              // Equal-size frames for both: `autoFit` fills whatever box it's
+              // given, so a smaller box is what was making the bottle look
+              // tiny, not the model itself. Same height classes as the pot's
+              // own, hidden below `sm` where a second 3D canvas would get
+              // cramped — bottom-aligned so both stand on the same shelf.
+              <div className="flex items-end gap-4 sm:gap-6">
+                <div className="min-w-0 flex-1">
+                  <HeroAssembly data={pot} explode={effectiveExplode} />
+                </div>
+                {bottle && (
+                  <div className="hidden min-w-0 flex-1 sm:block">
+                    <HeroBottleAssembly
+                      data={bottle}
+                      explode={effectiveExplode}
+                      className="h-[300px] sm:h-[420px] lg:h-[540px]"
+                    />
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex h-[400px] items-center justify-center text-gray-400 dark:text-gray-600">
                 <PotMark className="h-auto w-56" />
