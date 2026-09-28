@@ -7,17 +7,17 @@ import ProductsSection from '@/components/sections/ProductsSection';
 import CertificatesSection from '@/components/sections/CertificatesSection';
 import ClientsSection from '@/components/sections/ClientsSection';
 import CTASection from '@/components/sections/CTASection';
-import { getHeroAssembly } from '@/lib/heroAssembly';
+import { getHeroAssemblies } from '@/lib/heroAssembly';
 
 export default async function HomePage() {
-  // Resolved here rather than in the client hero, so the featured assembly's
+  // Resolved here rather than in the client hero, so the featured assemblies'
   // parts are known before first paint.
-  const assembly = await getHeroAssembly();
+  const { pot, bottle } = await getHeroAssemblies();
 
   return (
     <>
       <IntroCurtain />
-      <HeroSection assembly={assembly} />
+      <HeroSection pot={pot} bottle={bottle} />
       <ShowcaseSection />
       <VideoSection />
       <ProductsSection />

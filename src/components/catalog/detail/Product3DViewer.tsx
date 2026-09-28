@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { TrackballControls, Environment, useGLTF, useProgress } from '@react-three/drei';
+import { TrackballControls, Environment, ContactShadows, useGLTF, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import { RotateCcw, Loader2 } from 'lucide-react';
 import { useLang } from '@/lib/LangContext';
@@ -277,12 +277,22 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
  * follows the layout, so one distance only ever suits one window, and a guessed
  * centre leaves the subject lopsided. Measuring removes both guesses.
  */
-function StaticCamera({ target, from, fit, objectRef, margin = 1.06 }: {
+function StaticCamera({ target, from, fit, objectRef, margin = 1.06, bias = 0.62 }: {
   target: [number, number, number];
   from: [number, number, number];
   fit?: boolean;
   objectRef: React.RefObject<THREE.Group | null>;
   margin?: number;
+  /**
+   * Vertical pivot, as a fraction of the measured box's height from its base
+   * (0.5 = dead centre, the old behaviour). An exploded stack's box runs from
+   * the body's true base up through its highest floating layer, so centring
+   * on it put the base — and the ContactShadows plane sitting right at it —
+   * near the middle of the frame instead of the bottom, looking ownerless.
+   * Biasing above 0.5 pushes more of the stack (base included) into the lower
+   * part of the frame instead.
+   */
+  bias?: number;
 }) {
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
   const size = useThree((state) => state.size);
@@ -309,6 +319,7 @@ function StaticCamera({ target, from, fit, objectRef, margin = 1.06 }: {
     const box = new THREE.Box3().setFromObject(obj);
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
+    const pivot = new THREE.Vector3(center.x, box.min.y + (box.max.y - box.min.y) * bias, center.z);
 
     // View basis for the fixed direction.
     const forward = new THREE.Vector3(from[0], from[1], from[2])
@@ -333,7 +344,7 @@ function StaticCamera({ target, from, fit, objectRef, margin = 1.06 }: {
         i & 1 ? box.max.x : box.min.x,
         i & 2 ? box.max.y : box.min.y,
         i & 4 ? box.max.z : box.min.z
-      ).sub(center);
+      ).sub(pivot);
       const x = Math.abs(v.dot(right));
       const y = Math.abs(v.dot(up));
       const z = v.dot(forward); // toward the camera
@@ -342,10 +353,10 @@ function StaticCamera({ target, from, fit, objectRef, margin = 1.06 }: {
     if (!(distance > 0)) return;
 
     const depth = box.getSize(v).length();
-    camera.position.copy(center).addScaledVector(forward, distance);
+    camera.position.copy(pivot).addScaledVector(forward, distance);
     camera.near = Math.max(0.1, distance - depth);
     camera.far = distance + depth * 2;
-    camera.lookAt(center);
+    camera.lookAt(pivot);
     camera.updateProjectionMatrix();
   });
 
@@ -357,6 +368,70 @@ function StaticCamera({ target, from, fit, objectRef, margin = 1.06 }: {
 // customer having to scroll-zoom out first. Compact viewers keep the tighter
 // framing — they only ever show an assembled product in a small card.
 const DEFAULT_CAMERA_POS: [number, number, number] = [4.3, 2.9, 4.3];
+
+const _frameBox = new THREE.Box3();
+
+/**
+ * Nudges the orbit pivot up from `objectRef`'s exact vertical middle toward
+ * `bias` (fraction of its height from the base) instead — a fixed pivot like
+ * the static `cameraTarget` default only matches a short bottle, so a taller
+ * assembled pot (cap layers stacked on top) floats high in frame with a slab
+ * of empty canvas beneath it once zoomed out, and on a narrow mobile card its
+ * own cap can poke up under the Reassemble/reset buttons. Biasing the pivot
+ * toward the top of the *real*, per-product bounding box pushes the whole
+ * assembly down into the lower part of the frame instead, like a product
+ * photo standing on a surface.
+ */
+function AutoFramePivot({ objectRef, bias = 0.68 }: { objectRef: React.RefObject<THREE.Group | null>; bias?: number }) {
+  const controls = useThree((state) => state.controls) as unknown as
+    | { target: THREE.Vector3; update: () => void }
+    | null;
+
+  useFrame(() => {
+    const obj = objectRef.current;
+    if (!obj || !controls) return;
+    _frameBox.setFromObject(obj);
+    if (_frameBox.isEmpty()) return;
+    const y = _frameBox.min.y + (_frameBox.max.y - _frameBox.min.y) * bias;
+    if (Math.abs(controls.target.y - y) > 0.001) {
+      controls.target.y += (y - controls.target.y) * 0.1;
+      controls.update();
+    }
+  });
+
+  return null;
+}
+
+const _shadowBox = new THREE.Box3();
+
+/**
+ * Ground contact shadow, pinned to `objectRef`'s *measured* lowest point
+ * instead of a hardcoded y≈0. `BottleModel` deliberately doesn't assume a
+ * model's local origin sits at its true bottom (see its height comment) — a
+ * bottle GLB whose origin sits above its real base left the fixed-position
+ * shadow plane cutting through the middle of the bottle instead of sitting
+ * under its feet. Measuring the real box instead works for any model.
+ */
+function GroundedShadow({
+  objectRef, ...shadowProps
+}: { objectRef: React.RefObject<THREE.Group | null> } & Omit<React.ComponentProps<typeof ContactShadows>, 'position'>) {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    const obj = objectRef.current;
+    const group = groupRef.current;
+    if (!obj || !group) return;
+    _shadowBox.setFromObject(obj);
+    if (_shadowBox.isEmpty()) return;
+    group.position.y = _shadowBox.min.y - 0.005;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <ContactShadows {...shadowProps} />
+    </group>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -466,21 +541,29 @@ export default function Product3DViewer({
                 ))}
                 </SpinGroup>
               </group>
+              {/* Grounds the product with a soft floor shadow instead of it
+                  floating in a void. Kept as a sibling of the spinning/tilted
+                  content group — a static, non-rotating disc under it — so the
+                  shadow doesn't spin or tilt along with the model. */}
+              <GroundedShadow objectRef={contentRef} opacity={0.35} scale={8} blur={2.5} far={4} resolution={512} />
               {/* Trackball = free arcball rotation on all axes (X/Y and Z roll),
                   like Meshy's model preview — no fixed up-vector or polar limits.
                   A display-only viewer mounts no controls at all, so nothing
                   listens for drags and the camera is aimed once instead. */}
               {orbitEnabled ? (
-                <TrackballControls
-                  makeDefault
-                  noPan
-                  minDistance={2}
-                  maxDistance={9}
-                  rotateSpeed={3.5}
-                  zoomSpeed={1.2}
-                  dynamicDampingFactor={0.15}
-                  target={cameraTarget}
-                />
+                <>
+                  <TrackballControls
+                    makeDefault
+                    noPan
+                    minDistance={2}
+                    maxDistance={9}
+                    rotateSpeed={3.5}
+                    zoomSpeed={1.2}
+                    dynamicDampingFactor={0.15}
+                    target={cameraTarget}
+                  />
+                  <AutoFramePivot objectRef={contentRef} />
+                </>
               ) : (
                 <StaticCamera
                   target={cameraTarget}
