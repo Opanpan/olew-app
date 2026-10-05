@@ -23,9 +23,10 @@ interface HeroAssemblyProps {
    * feeding it a gradually-changing value already reads as smooth motion.
    */
   explode?: number;
+  className?: string;
 }
 
-export default function HeroAssembly({ data, explode = 1 }: HeroAssemblyProps) {
+export default function HeroAssembly({ data, explode = 1, className }: HeroAssemblyProps) {
   // `data.parts` arrives bottom-up, so the index is also how many gaps a layer
   // needs to clear the ones beneath it.
   const layers: LayerConfig[] = data.parts.map((part, i) => ({
@@ -51,7 +52,7 @@ export default function HeroAssembly({ data, explode = 1 }: HeroAssemblyProps) {
       autoFit
       onReady={markHeroReady}
       onProgress={markHeroProgress}
-      className="h-[300px] sm:h-[420px] lg:h-[540px]"
+      className={className}
     />
   );
 }

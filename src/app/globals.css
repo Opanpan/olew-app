@@ -8,8 +8,17 @@
 }
 
 @layer base {
-  html {
+  /* Smooth scrolling only once the visitor has interacted (see
+     `useSmoothScrollAfterInteraction`). Set unconditionally on <html>, it also
+     animates the browser's own scroll restoration, so every reload (and every
+     dev full-reload) visibly glides down from the top. */
+  html.smooth-scroll {
     scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html.smooth-scroll {
+      scroll-behavior: auto;
+    }
   }
   
   body {

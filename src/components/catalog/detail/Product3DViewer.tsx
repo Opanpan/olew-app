@@ -468,7 +468,9 @@ export default function Product3DViewer({
         !compact && 'rounded-md bg-gray-100 dark:bg-gray-900',
         className
       )}
-      style={{ touchAction: 'none' }}
+      // Only an interactive viewer claims touches for rotation; a display-only
+      // one (the home hero) must let a swipe over it scroll the page.
+      style={{ touchAction: orbitEnabled ? 'none' : 'auto' }}
     >
       {!compact && (
         <button
