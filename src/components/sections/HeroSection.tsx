@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
@@ -35,6 +35,107 @@ function PotMark({ className }: { className?: string }) {
         <path d="M48 126v26a52 13 0 0 0 104 0v-26" />
       </g>
     </svg>
+  );
+}
+
+/**
+ * "POT DEVINDA 10, 15, & 30 GR" → "Devinda": the catalogue name minus its
+ * family word and size suffix, which the caption already shows on their own
+ * lines. Falls back to the whole name if that leaves nothing.
+ */
+function displayName(name: string) {
+  const words = name.trim().split(/\s+/);
+  const body = words.slice(/^(pot|bottle|botol)$/i.test(words[0] ?? '') ? 1 : 0);
+  const cut = body.findIndex((w) => /^\d/.test(w));
+  const core = (cut === -1 ? body : body.slice(0, cut)).join(' ') || name;
+  return core
+    .toLowerCase()
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/** Canvas heights, shared so the pot and bottle stand on the same shelf. */
+const STAGE_H = 'h-[250px] min-[420px]:h-[290px] sm:h-[400px] lg:h-[460px]';
+
+interface HeroFigureProps {
+  index: number;
+  family: string;
+  data: HeroAssemblyData;
+  /** Mobile only: put the caption on the left so the two rows zigzag. */
+  flip?: boolean;
+  delay: number;
+  children: ReactNode;
+}
+
+/**
+ * One product on the hero stage with its museum-plaque caption. Below `sm`
+ * the caption sits beside the object (alternating sides, so the column reads
+ * as a zigzag rather than two stacked blocks); from `sm` up the two figures
+ * stand side by side and each caption drops under its object on a hairline.
+ */
+function HeroFigure({ index, family, data, flip, delay, children }: HeroFigureProps) {
+  const { lang, dict } = useLang();
+  const name = displayName(lang === 'id' ? data.name_id : data.name_en);
+  const slug = lang === 'id' ? data.slug_id : data.slug_en;
+  // Each spec stays whole, so a narrow caption wraps between them, never inside one.
+  const specs = [data.volume, data.material].filter((v): v is string => !!v);
+  const parts = dict.hero.featured_parts.replace('{n}', String(data.parts.length + 1));
+
+  return (
+    <figure
+      className={cn(
+        'flex min-w-0 flex-1 items-center gap-3 sm:flex-col sm:items-stretch sm:gap-0',
+        flip && 'flex-row-reverse',
+      )}
+    >
+      <div className="w-[55%] shrink-0 sm:w-full">{children}</div>
+      <Reveal
+        from={flip ? 'right' : 'left'}
+        delay={delay}
+        className={cn(
+          'min-w-0 flex-1 border-gray-200 dark:border-gray-800',
+          'sm:mt-2 sm:border-t sm:pt-5 sm:text-left',
+          flip ? 'border-r pr-4 text-right sm:border-r-0 sm:pr-0' : 'border-l pl-4 sm:border-l-0 sm:pl-0',
+        )}
+      >
+        <figcaption>
+          <span
+            className={cn(
+              'flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-primary-600 dark:text-primary-400',
+              flip && 'justify-end sm:justify-start',
+            )}
+          >
+            <span className="font-display text-sm font-bold tracking-normal">{String(index).padStart(2, '0')}</span>
+            <span aria-hidden className="h-px w-5 bg-primary-500/40" />
+            {family}
+          </span>
+          <span className="font-display mt-2 block text-xl font-bold leading-tight tracking-tight text-gray-900 [overflow-wrap:break-word] dark:text-white min-[420px]:text-2xl sm:mt-2.5 sm:text-[1.75rem] sm:leading-[1.05] lg:text-3xl">
+            {name}
+          </span>
+          {specs.length > 0 && (
+            <span className="mt-2 block text-xs text-gray-600 dark:text-gray-300">
+              {specs.map((spec, i) => (
+                <span key={spec} className="whitespace-nowrap">
+                  {i > 0 && ' · '}
+                  {spec}
+                </span>
+              ))}
+            </span>
+          )}
+          <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{parts}</span>
+          <Link
+            href={`/${lang}/products/${slug}`}
+            className="group mt-1 inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap text-[0.8125rem] font-medium sm:gap-1.5 sm:text-sm text-primary-700 transition-colors hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
+          >
+            <span className="underline decoration-primary-500/30 underline-offset-4 transition-colors group-hover:decoration-primary-500">
+              {dict.hero.featured_view}
+            </span>
+            <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          </Link>
+        </figcaption>
+      </Reveal>
+    </figure>
   );
 }
 
@@ -171,22 +272,17 @@ export default function HeroSection({ pot, bottle }: HeroSectionProps) {
           >
             {pot ? (
               // Equal-size frames for both: `autoFit` fills whatever box it's
-              // given, so a smaller box is what was making the bottle look
-              // tiny, not the model itself. Same height classes as the pot's
-              // own, hidden below `sm` where a second 3D canvas would get
-              // cramped — bottom-aligned so both stand on the same shelf.
-              <div className="flex items-end gap-4 sm:gap-6">
-                <div className="min-w-0 flex-1">
-                  <HeroAssembly data={pot} explode={effectiveExplode} />
-                </div>
+              // given, so a smaller box is what would make the bottle look tiny,
+              // not the model itself. Stacked as a zigzag on phones, side by
+              // side from `sm`, bottom-aligned so both stand on the same shelf.
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-6">
+                <HeroFigure index={1} family={dict.hero.featured_pot} data={pot} delay={0.9}>
+                  <HeroAssembly data={pot} explode={effectiveExplode} className={STAGE_H} />
+                </HeroFigure>
                 {bottle && (
-                  <div className="hidden min-w-0 flex-1 sm:block">
-                    <HeroBottleAssembly
-                      data={bottle}
-                      explode={effectiveExplode}
-                      className="h-[300px] sm:h-[420px] lg:h-[540px]"
-                    />
-                  </div>
+                  <HeroFigure index={2} family={dict.hero.featured_bottle} data={bottle} flip delay={1.05}>
+                    <HeroBottleAssembly data={bottle} explode={effectiveExplode} className={STAGE_H} />
+                  </HeroFigure>
                 )}
               </div>
             ) : (

@@ -40,6 +40,14 @@ export interface HeroPart {
 export interface HeroAssemblyData {
   /** The Body — the product's own model. */
   baseUrl: string;
+  /** Caption copy for the hero's product label, straight from the catalogue. */
+  name_en: string;
+  name_id: string;
+  slug_en: string;
+  slug_id: string;
+  /** Spec values (e.g. "250 ml", "PET"); absent when the product doesn't list them. */
+  volume?: string;
+  material?: string;
   /** Attached parts, ordered bottom of the stack first. */
   parts: HeroPart[];
 }
@@ -87,8 +95,16 @@ async function resolveHeroAssembly(
 
   if (parts.length === 0) return null;
 
+  const attr = (key: string) => product.attributes?.find((a) => a.key === key)?.value?.trim() || undefined;
+
   return {
     baseUrl: product.three_d_file_path,
+    name_en: product.name_en,
+    name_id: product.name_id,
+    slug_en: product.slug_en,
+    slug_id: product.slug_id,
+    volume: attr('volume'),
+    material: attr('material'),
     parts,
   };
 }

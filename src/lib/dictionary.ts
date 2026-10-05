@@ -25,6 +25,10 @@ export const dictionaries = {
       subtitle: 'Elevate your brand with our customizable premium bottles. From concept to creation, we deliver packaging that speaks to quality and sophistication.',
       cta_primary: 'Explore Products',
       cta_secondary: 'Get Quote',
+      featured_pot: 'Pot',
+      featured_bottle: 'Bottle',
+      featured_parts: '{n}-part assembly',
+      featured_view: 'View product',
     },
     banners: {
       badge: 'Highlights',
@@ -407,6 +411,10 @@ export const dictionaries = {
       subtitle: 'Tingkatkan brand Anda dengan botol premium yang dapat dikustomisasi. Dari konsep hingga kreasi, kami menghadirkan kemasan berkualitas.',
       cta_primary: 'Jelajahi Produk',
       cta_secondary: 'Dapatkan Penawaran',
+      featured_pot: 'Pot',
+      featured_bottle: 'Botol',
+      featured_parts: 'Rakitan {n} komponen',
+      featured_view: 'Lihat produk',
     },
     banners: {
       badge: 'Sorotan',
