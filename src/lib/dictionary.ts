@@ -384,6 +384,12 @@ export const dictionaries = {
       newsletter_desc: 'Stay updated with our latest products and innovations.',
       email_placeholder: 'Your email',
     },
+    error_page: {
+      title: 'Something went wrong',
+      description: 'An unexpected error stopped this page from loading. It has been reported to our team.',
+      retry: 'Try again',
+      home: 'Back to home',
+    },
   },
   id: {
     nav: {
@@ -769,6 +775,12 @@ export const dictionaries = {
       copyright: '© {year} PT. Olew Plasindo Jaya. Semua hak dilindungi.',
       newsletter_desc: 'Tetap update dengan produk terbaru dan inovasi kami.',
       email_placeholder: 'Email Anda',
+    },
+    error_page: {
+      title: 'Terjadi kesalahan',
+      description: 'Terjadi kesalahan tak terduga sehingga halaman ini gagal dimuat. Kesalahan ini sudah dilaporkan ke tim kami.',
+      retry: 'Coba lagi',
+      home: 'Kembali ke beranda',
     },
   },
 };

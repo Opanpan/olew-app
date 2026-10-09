@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
@@ -24,8 +25,20 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # NEXT_PUBLIC_* vars must be present at BUILD time — they are inlined into the JS bundle
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+ENV NEXT_PUBLIC_SENTRY_ENVIRONMENT=$NEXT_PUBLIC_SENTRY_ENVIRONMENT
 
-RUN npm run build
+# Source-map upload. The org/project slugs aren't secret; the auth token is,
+# so it's mounted as a BuildKit secret for this one RUN and never stored in a
+# layer or the image history. Missing secret → upload skipped, build still ok.
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+RUN --mount=type=secret,id=sentry_auth_token \
+  SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null)" \
+  SENTRY_ORG="$SENTRY_ORG" SENTRY_PROJECT="$SENTRY_PROJECT" \
+  npm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner

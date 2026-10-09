@@ -22,5 +22,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|favicon.ico).*)'],
+  // `relay` is the Sentry tunnel (`tunnelRoute` in next.config.js). Middleware
+  // runs before rewrites, so without this it would be redirected to
+  // `/en/relay` and every browser error report would 404.
+  matcher: ['/((?!_next|api|relay|favicon.ico).*)'],
 };

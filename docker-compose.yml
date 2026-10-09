@@ -5,6 +5,12 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+        - NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN:-}
+        - NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT:-production}
+        - SENTRY_ORG=${SENTRY_ORG:-}
+        - SENTRY_PROJECT=${SENTRY_PROJECT:-}
+      secrets:
+        - sentry_auth_token
     container_name: olew-group
     restart: unless-stopped
     expose:
@@ -25,6 +31,11 @@ services:
       start_period: 60s
     networks:
       - proxy-network
+
+secrets:
+  # Read from the host env / .env at build time; see the Dockerfile.
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
 
 networks:
   proxy-network:

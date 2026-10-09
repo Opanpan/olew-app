@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect, useCallback, Component, type ReactNode } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback, Component, type ErrorInfo, type ReactNode } from 'react';
 import { ArrowRight, Heart, Share2, Link2, MessageCircle, Layers, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import * as Sentry from '@sentry/nextjs';
 import { ProductDetail, ProductListItem, ProductCompatibility, CompatibleProduct, getProductDetail } from '@/lib/publicApi';
 import { useLang } from '@/lib/LangContext';
 import { useLike, useShare } from '@/hooks/useProductActions';
@@ -53,10 +54,17 @@ const EXPLODE_STEP = 0.5;
 const DEFAULT_COLOR: PartColor = { hex: colorToHex['White'] ?? '#ffffff', name: 'White' };
 
 // Catches GLB load failures so a broken model doesn't take the page down.
+// The fallback hides the failure from the visitor, so it's reported instead.
 interface EBState { hasError: boolean }
 class Viewer3DErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, EBState> {
   state: EBState = { hasError: false };
   static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    Sentry.captureException(error, {
+      tags: { feature: '3d-viewer' },
+      contexts: { react: { componentStack: info.componentStack } },
+    });
+  }
   render() { return this.state.hasError ? this.props.fallback : this.props.children; }
 }
 

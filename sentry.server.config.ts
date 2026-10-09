@@ -1,0 +1,5 @@
+// Node runtime SDK: server components, SSR, route handlers, sitemap.
+import * as Sentry from '@sentry/nextjs';
+import { sentryBaseOptions } from '@/lib/sentryOptions';
+
+Sentry.init(sentryBaseOptions);

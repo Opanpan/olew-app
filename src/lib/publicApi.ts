@@ -1,5 +1,38 @@
+import * as Sentry from '@sentry/nextjs';
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 const IS_DEV = process.env.NODE_ENV === 'development';
+
+/**
+ * `GET /api/v1/public/products/:id/related`: ids and slugs collapsed so every
+ * product's failure groups into one Sentry issue per endpoint, not one each.
+ */
+function endpointOf(method: string, url: string) {
+  const path = url.slice(BASE_URL.length).split('?')[0];
+  return `${method} ${path.replace(/(\/products\/)(?!(?:filters|latest|popular)(?:\/|$))[^/]+/, '$1:id')}`;
+}
+
+/**
+ * The fetchers below deliberately degrade to an empty result instead of
+ * throwing, so a backend outage renders as an empty page, which nobody
+ * would ever report. This sends those swallowed failures to Sentry, grouped
+ * per endpoint (and status), without changing what the caller gets back.
+ */
+function reportApiFailure(method: string, url: string, error: unknown, status?: number) {
+  const endpoint = endpointOf(method, url);
+  const kind = status ? String(status) : error instanceof Error ? error.name : 'unknown';
+  Sentry.captureException(error, {
+    tags: { 'api.endpoint': endpoint, 'api.status': status ?? 'none' },
+    contexts: { api: { url, status } },
+    fingerprint: ['public-api', endpoint, kind],
+  });
+}
+
+/** Only 5xx is a fault: a 4xx (e.g. 404 for an unknown slug) is an expected answer. */
+function reportApiStatus(method: string, url: string, status: number) {
+  if (status < 500) return;
+  reportApiFailure(method, url, new Error(`${endpointOf(method, url)} responded ${status}`), status);
+}
 
 function devLog(url: string, status: number, payload: unknown, response: unknown) {
   if (!IS_DEV) return;
@@ -60,11 +93,15 @@ async function fetchPublic<T>(path: string): Promise<T[]> {
     const res = await fetch(url, { next: { revalidate: 60 } });
     const json = await res.json();
     devLog(url, res.status, null, json);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return [];
+    }
     const data = json?.data;
     return Array.isArray(data) ? data : [];
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return [];
   }
 }
@@ -246,7 +283,10 @@ export async function getProducts(query: {
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     devLog(url, res.status, Object.fromEntries(params), json);
-    if (!res.ok) return { data: [], meta: { limit: 12, offset: 0, total: 0 } };
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return { data: [], meta: { limit: 12, offset: 0, total: 0 } };
+    }
     const inner = json?.data;
     const raw: ProductListItem[] = Array.isArray(inner?.data) ? inner.data : [];
     const seen = new Set<string>();
@@ -255,6 +295,7 @@ export async function getProducts(query: {
     return { data, meta };
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return { data: [], meta: { limit: 12, offset: 0, total: 0 } };
   }
 }
@@ -265,10 +306,14 @@ export async function getProductDetail(id: string): Promise<ProductDetail | null
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     devLog(url, res.status, { id }, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return null;
+    }
     return (json?.data as ProductDetail) ?? null;
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return null;
   }
 }
@@ -279,11 +324,15 @@ export async function getRelatedProducts(id: string): Promise<ProductListItem[]>
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     devLog(url, res.status, { id }, json);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return [];
+    }
     const data = json?.data;
     return Array.isArray(data) ? data : [];
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return [];
   }
 }
@@ -294,11 +343,15 @@ export async function getProductCompatibilities(id: string): Promise<ProductComp
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     devLog(url, res.status, { id }, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return null;
+    }
     // Envelope: { data: { data: { product_id, compatible: [] } } }
     return (json?.data?.data as ProductCompatibility) ?? null;
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return null;
   }
 }
@@ -320,10 +373,14 @@ export async function likeProduct(id: string, visitorId: string): Promise<Produc
     const res = await fetch(url, { method: 'POST', headers: { 'X-Visitor-Id': visitorId } });
     const json = await res.json();
     devLog(url, res.status, { id, visitorId }, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('POST', url, res.status);
+      return null;
+    }
     return (json?.data as ProductEngagement) ?? null;
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m POST ${url} —`, err);
+    reportApiFailure('POST', url, err);
     return null;
   }
 }
@@ -334,10 +391,14 @@ export async function unlikeProduct(id: string, visitorId: string): Promise<Prod
     const res = await fetch(url, { method: 'DELETE', headers: { 'X-Visitor-Id': visitorId } });
     const json = await res.json();
     devLog(url, res.status, { id, visitorId }, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('DELETE', url, res.status);
+      return null;
+    }
     return (json?.data as ProductEngagement) ?? null;
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m DELETE ${url} —`, err);
+    reportApiFailure('DELETE', url, err);
     return null;
   }
 }
@@ -359,10 +420,14 @@ export async function shareProduct(
     });
     const json = await res.json();
     devLog(url, res.status, { id, visitorId, platform }, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('POST', url, res.status);
+      return null;
+    }
     return (json?.data as ProductEngagement) ?? null;
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m POST ${url} —`, err);
+    reportApiFailure('POST', url, err);
     return null;
   }
 }
@@ -373,7 +438,10 @@ export async function getProductFiltersData(): Promise<ProductFiltersData | null
     const res = await fetch(url, { next: { revalidate: 300 } });
     const json = await res.json();
     devLog(url, res.status, null, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return null;
+    }
     const data = json?.data;
     if (!data) return null;
     return {
@@ -384,6 +452,7 @@ export async function getProductFiltersData(): Promise<ProductFiltersData | null
     };
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return null;
   }
 }
@@ -395,11 +464,15 @@ async function fetchProductList(url: string): Promise<ProductListItem[]> {
     const res = await fetch(url, { cache: 'no-store' });
     const json = await res.json();
     devLog(url, res.status, null, json);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return [];
+    }
     const data = json?.data;
     return Array.isArray(data) ? data : [];
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return [];
   }
 }
@@ -423,7 +496,10 @@ export async function getAttributeDefinitions(): Promise<AttributeDefinitionList
     const res = await fetch(url, { next: { revalidate: 300 } });
     const json = await res.json();
     devLog(url, res.status, null, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return null;
+    }
     const data = json?.data;
     if (!data) return null;
     return {
@@ -432,6 +508,7 @@ export async function getAttributeDefinitions(): Promise<AttributeDefinitionList
     };
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return null;
   }
 }
@@ -462,7 +539,10 @@ export async function getSitemapFeed(): Promise<SitemapFeed | null> {
     const res = await fetch(url, { next: { revalidate: 3600 } });
     const json = await res.json();
     devLog(url, res.status, null, json);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      reportApiStatus('GET', url, res.status);
+      return null;
+    }
     const data = json?.data;
     if (!data) return null;
     return {
@@ -472,6 +552,7 @@ export async function getSitemapFeed(): Promise<SitemapFeed | null> {
     };
   } catch (err) {
     if (IS_DEV) console.error(`\x1b[36m[API]\x1b[0m \x1b[31m✗\x1b[0m GET ${url} —`, err);
+    reportApiFailure('GET', url, err);
     return null;
   }
 }
