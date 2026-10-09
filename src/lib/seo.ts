@@ -3,7 +3,7 @@ import type { ProductDetail } from './publicApi';
 
 // Public site origin — distinct from NEXT_PUBLIC_API_BASE_URL (the API host).
 // Sitemap/canonical/hreflang URLs must point at this domain, never the API.
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://olew-app.alriansyah.my.id').replace(/\/$/, '');
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://olew.alriansyah.my.id').replace(/\/$/, '');
 
 export type Lang = 'en' | 'id';
 
